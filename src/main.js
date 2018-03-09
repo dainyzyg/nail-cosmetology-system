@@ -1,0 +1,19 @@
+import Vue from 'vue'
+import ElementUI from 'element-ui'
+import 'element-ui/lib/theme-chalk/index.css'
+import App from './App.vue'
+import router from './router'
+import indexedDBPlugin from './modules/indexedDBPlugin'
+import algorithm from './modules/algorithm'
+
+Vue.config.productionTip = false
+
+Vue.use(indexedDBPlugin)
+Vue.use(algorithm)
+Vue.use(ElementUI)
+/* eslint-disable no-new */
+new Vue({
+  el: '#app',
+  router,
+  render: (h) => h(App)
+})
