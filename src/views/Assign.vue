@@ -94,7 +94,7 @@ export default {
       const preAssignList = []
       await this.$IDB.executeTransaction(['assign'], 'readonly', t => {
         const store = t.objectStore('assign')
-        const request = store.index('date').openCursor(IDBKeyRange.only(this.$algorithm.getDateStart()))
+        const request = store.index('date').openCursor(IDBKeyRange.only(this.dateBegin))
         request.onsuccess = event => {
           const cursor = event.target.result
           if (cursor) {
@@ -110,7 +110,7 @@ export default {
       const technicianList = []
       await this.$IDB.executeTransaction(['attendance', 'technician'], 'readonly', t => {
         const store = t.objectStore('attendance')
-        const request = store.index('date').openCursor(IDBKeyRange.only(this.$algorithm.getDateStart()))
+        const request = store.index('date').openCursor(IDBKeyRange.only(this.dateBegin))
         request.onsuccess = event => {
           const cursor = event.target.result
           if (cursor) {
@@ -156,8 +156,8 @@ export default {
     },
     getPIStyle(pi) {
       const duration = pi.timeEnd - pi.timeStart
-      const beginTime = this.$algorithm.workBeginTime()
-      const endTime = this.$algorithm.workEndTime()
+      const beginTime = this.workBeginTime
+      const endTime = this.workEndTime
       const totalDuration = endTime - beginTime
       const start = pi.timeStart - beginTime
       const left = start / totalDuration
@@ -212,9 +212,7 @@ export default {
       const orderList = []
       await this.$IDB.executeTransaction(['order'], 'readonly', t => {
         const store = t.objectStore('order')
-        const request = store
-          .index('preorderTime')
-          .openCursor(IDBKeyRange.bound(this.$algorithm.getDateStart(), this.$algorithm.getDateEnd()))
+        const request = store.index('preorderTime').openCursor(IDBKeyRange.bound(this.dateBegin, this.dateEnd))
         request.onsuccess = event => {
           const cursor = event.target.result
           if (cursor) {
@@ -226,7 +224,39 @@ export default {
       this.orderList = orderList
     }
   },
-  computed: {}
+  computed: {
+    dateBegin() {
+      return new Date(this.dataTime.toDateString())
+    },
+    dateEnd() {
+      return new Date(this.dateBegin.getTime() + 24 * 60 * 60 * 1000 - 1)
+    },
+    workBeginTime() {
+      const day = this.dataTime.getDay()
+      let time
+      if (day > 0 && day < 6) {
+        time = parseInt(localStorage.workBeginTime)
+      } else {
+        time = parseInt(localStorage.weekendBeginTime)
+      }
+      return new Date(this.dateBegin.getTime() + time * 60 * 60 * 1000)
+    },
+    workEndTime() {
+      const day = this.dataTime.getDay()
+      let time
+      if (day > 0 && day < 6) {
+        time = parseInt(localStorage.workEndTime)
+      } else {
+        time = parseInt(localStorage.weekendEndTime)
+      }
+      return new Date(this.dateBegin.getTime() + time * 60 * 60 * 1000)
+    }
+  },
+  watch: {
+    async dataTime(val) {
+      this.assignpProjects()
+    }
+  }
 }
 </script>
 <style scoped>

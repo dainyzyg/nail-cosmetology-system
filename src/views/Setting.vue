@@ -56,7 +56,7 @@ export default {
   watch: {
     ...watch,
     dateTimeNow(val) {
-      localStorage.dateTimeNow = val.toISOString()
+      localStorage.dateTimeNow = new Date(2018, 1, 26, val.getHours(), val.getMinutes(), val.getSeconds()).toISOString()
     }
   }
 }

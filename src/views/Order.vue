@@ -12,11 +12,22 @@
         el-table-column(prop="isPreorder" label="预约" align="center" header-align="center" width="120")
           template(slot-scope='scope')
             span {{scope.row.isPreorder?scope.row.preorderTime.toLocaleTimeString('en-GB'):'无'}}
-        el-table-column(align="center" label="操作" width="180")
+        el-table-column(align="center" label="操作" width="220")
           template(slot-scope='scope')
+            el-button(@click='account(scope.row)' size='small' type="success") 结算
             el-button(@click='edit(scope.row)' size='small' type="primary") 编辑
             el-button(@click='remove(scope.row.id)' size='small' type='danger') 删除
     el-dialog(title='新增' :visible.sync='addVisible' width="96vw" top="2vh" style="overflow:hidden;")
+      el-dialog(title='必问附加' :visible.sync='addAskVisible' style="overflow:hidden;" append-to-body)
+        div(style="height: calc(70vh - 54px - 70px - 60px);overflow-y:auto;")
+          el-form(label-width="80px")
+            el-form-item(:label="i.name" v-for="i in askAddList" :key="i.id")
+              el-radio-group(v-model="askResult[i.id]" size="medium")
+                el-radio-button(label="do") 做
+                el-radio-button(label="notdo") 不做
+        .dialog-footer(slot='footer')
+          el-button(@click="addAskVisible=false") 取 消
+          el-button(type='primary' @click="completeAsk") 确 定
       .dialog-body.flex-c
         el-form(:inline="true" label-width="80px")
           el-form-item(label='名称')
@@ -31,7 +42,7 @@
             el-time-picker(@focus="focus" style="margin-left:10px;" v-model="formData.orderDate" placeholder="下单时间")
           el-form-item(label='预约')
             el-switch(v-model="formData.isPreorder")
-            el-time-picker(:default-value="workBegin" v-if="formData.isPreorder" style="margin-left:10px;" v-model="formData.preorderTime" placeholder="预约时间")
+            el-date-picker(type="datetime" :default-value="workBegin" v-if="formData.isPreorder" style="margin-left:10px;" v-model="formData.preorderTime" placeholder="预约时间")
         .project-wrapper.flex
           PanelSelect(title="种类" :data="kindList" :selectedItem.sync="selectedKind" flex="0 0 100px")
           PanelSelect(title="项目" :data="projectList" :selectedItem.sync="selectedProject" flex="0 0 150px")
@@ -43,21 +54,29 @@
       .dialog-footer(slot='footer')
         el-button(@click="addVisible=false") 取 消
         el-button(type='primary' @click="save") 确 定
+    Account(:visible.sync="accountVisible" :data="accountOrderInfo")
+
 </template>
 <script>
 import PanelSelect from '@/components/PanelSelect'
 import OrderInfoPanel from '@/components/OrderInfoPanel'
+import Account from '@/components/Account'
 
 export default {
   components: {
     PanelSelect,
-    OrderInfoPanel
+    OrderInfoPanel,
+    Account
   },
   data() {
     return {
+      accountOrderInfo: {},
+      accountVisible: false,
+      askResult: {},
+      askAddList: [],
+      addAskVisible: false,
       addVisible: false,
-      orderTime: new Date('2018/2/27'),
-      dataTime: new Date('2018/2/27'),
+      dataTime: this.$algorithm.getDateNow(),
       tableData: [],
       formData: {},
       selectedKind: {},
@@ -79,6 +98,10 @@ export default {
   methods: {
     focus() {
       // clearInterval(this.st)
+    },
+    account(data) {
+      this.accountOrderInfo = data
+      this.accountVisible = true
     },
     async edit(data) {
       this.formData = JSON.parse(JSON.stringify(data), (k, v) => {
@@ -158,7 +181,40 @@ export default {
         })
       }
     },
+    completeAsk() {
+      let isAked = true
+      const newSelectAdd = []
+      for (let i of this.askAddList) {
+        if (this.askResult[i.id]) {
+          if (this.askResult[i.id] == 'do') {
+            newSelectAdd.push(i)
+          }
+        } else {
+          isAked = false
+          break
+        }
+      }
+      if (isAked) {
+        this.selectedAdditions.push(...newSelectAdd)
+        const orderItem = {
+          kind: this.selectedKind,
+          project: this.selectedProject,
+          additions: this.selectedAdditions,
+          technicians: this.selectedTechnicians.map(item => {
+            return { id: item.id, name: item.name }
+          })
+        }
+        this.orderInfo.push(orderItem)
+        this.addAskVisible = false
+      }
+    },
     addProject() {
+      this.askResult = {}
+      this.askAddList = this.additionList.filter(a => a.ask && !this.selectedAdditions.find(s => s.id == a.id))
+      if (this.askAddList.length > 0) {
+        this.addAskVisible = true
+        return
+      }
       const orderItem = {
         kind: this.selectedKind,
         project: this.selectedProject,
@@ -179,9 +235,8 @@ export default {
       this.formData = {}
 
       const dateNow = new Date()
-      console.log(dateNow)
-      this.orderTime.setHours(dateNow.getHours(), dateNow.getMinutes(), dateNow.getSeconds())
-      const orderDate = new Date(this.orderTime.getTime())
+      const orderDate = new Date(this.dataTime)
+      orderDate.setHours(dateNow.getHours(), dateNow.getMinutes(), dateNow.getSeconds())
       this.formData = { orderDate }
       console.log(this.orderTime)
       this.addVisible = true

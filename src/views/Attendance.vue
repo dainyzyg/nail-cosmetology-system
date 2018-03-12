@@ -21,7 +21,6 @@ export default {
   data() {
     return {
       attendanceInfo: {},
-      value4: [new Date(), new Date()],
       dataTime: this.$algorithm.getDateNow(),
       tableData: []
     }
@@ -35,7 +34,7 @@ export default {
       const attendanceInfo = {}
       await this.$IDB.executeTransaction('attendance', 'readonly', t => {
         const store = t.objectStore('attendance')
-        const request = store.index('date').openCursor(IDBKeyRange.only(this.$algorithm.getDateStart()))
+        const request = store.index('date').openCursor(IDBKeyRange.only(this.dateBegin))
         request.onsuccess = event => {
           const cursor = event.target.result
           if (cursor) {
@@ -48,6 +47,7 @@ export default {
       this.attendanceInfo = attendanceInfo
     },
     saveAttendance(info, id) {
+      console.log(info)
       if (info.isAttend) {
         this.$IDB.put('attendance', info)
       } else {
@@ -65,17 +65,53 @@ export default {
             this.tableData.push(cursor.value)
             if (!this.attendanceInfo[cursor.value.id]) {
               this.$set(this.attendanceInfo, cursor.value.id, {
-                startTime: this.$algorithm.workBeginTime(),
-                endTime: this.$algorithm.workEndTime(),
+                startTime: this.workBeginTime,
+                endTime: this.workEndTime,
                 isAttend: false,
                 id: cursor.value.id,
-                date: this.$algorithm.getDateStart()
+                date: this.dateBegin
               })
             }
             cursor.continue()
           }
         }
       })
+    }
+  },
+  computed: {
+    dateBegin() {
+      return new Date(this.dataTime.toDateString())
+    },
+    dateEnd() {
+      return new Date(this.dateBegin.getTime() + 24 * 60 * 60 * 1000 - 1)
+    },
+    workBeginTime() {
+      const day = this.dataTime.getDay()
+      let time
+      if (day > 0 && day < 6) {
+        time = parseInt(localStorage.workBeginTime)
+      } else {
+        time = parseInt(localStorage.weekendBeginTime)
+      }
+      return new Date(this.dateBegin.getTime() + time * 60 * 60 * 1000)
+    },
+    workEndTime() {
+      const day = this.dataTime.getDay()
+      let time
+      if (day > 0 && day < 6) {
+        time = parseInt(localStorage.workEndTime)
+      } else {
+        time = parseInt(localStorage.weekendEndTime)
+      }
+      return new Date(this.dateBegin.getTime() + time * 60 * 60 * 1000)
+    }
+  },
+  watch: {
+    async dataTime(val) {
+      this.attendanceInfo = {}
+      this.tableData = []
+      await this.getAttendanceInfo()
+      this.getData()
     }
   }
 }
