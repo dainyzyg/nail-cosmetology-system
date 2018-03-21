@@ -6,33 +6,38 @@
     .table-wraper
       el-table.table(:data="tableData" border height="calc(100vh - 66px)")
         el-table-column(prop="name" label="姓名")
-        el-table-column(align="center" label="操作" width="180")
+        el-table-column(align="center" label="操作" width="250")
           template(slot-scope='scope')
             el-button(@click='edit(scope.row)' size='small' type="primary") 编辑
+            el-button(@click='skillSetting(scope.row)' size='small' type="primary") 技能设置
             el-button(@click='remove(scope.row.id)' size='small' type='danger') 删除
-    el-dialog(title='新增技师' :visible.sync='addVisible' width="80vw" top="5vh" style="overflow:hidden;")
+    el-dialog(title='新增技师' :visible.sync='addVisible' style="overflow:hidden;")
       el-form(:inline="true" label-width="80px")
         el-form-item(label='姓名')
           el-input(auto-complete='off' v-model="formData.name")
         el-form-item(label='密码')
           el-input(auto-complete='off' v-model="formData.password")
-      el-tabs(type="border-card")
-        el-tab-pane(:label="item.name" :key="item.id" v-for="item in kindList")
-          ProjectSelect(:kind="item" :skills="skills")
+      //- el-tabs(type="border-card")
+      //-   el-tab-pane(:label="item.name" :key="item.id" v-for="item in kindList")
+      //-     ProjectSelect(:kind="item" :skills="skills")
       .dialog-footer(slot='footer')
         el-button(@click="addVisible=false") 取 消
         el-button(type='primary' @click="save") 确 定
+    SkillSetting(v-model="skillSettingVisible" :technician="technician")
 
 </template>
 <script>
-import ProjectSelect from '@/components/ProjectSelect'
-
+// import ProjectSelect from '@/components/ProjectSelect'
+import SkillSetting from '@/components/SkillSetting'
 export default {
   components: {
-    ProjectSelect
+    // ProjectSelect,
+    SkillSetting
   },
   data() {
     return {
+      technician: {},
+      skillSettingVisible: false,
       skills: {},
       kindList: [],
       formData: {},
@@ -87,10 +92,9 @@ export default {
         if (!this.formData.id) {
           const id = this.getNewID()
           this.formData.id = id
-          this.formData.skillInfo = this.skills
+          this.formData.skillInfo = {}
           await this.$IDB.add('technician', this.formData)
         } else {
-          this.formData.skillInfo = this.skills
           await this.$IDB.put('technician', this.formData)
         }
         this.addVisible = false
@@ -101,6 +105,11 @@ export default {
           type: 'error'
         })
       }
+    },
+    skillSetting(data) {
+      this.technician = data
+      this.technician.skillInfo = this.technician.skillInfo || {}
+      this.skillSettingVisible = true
     },
     async edit(data) {
       this.formData = JSON.parse(JSON.stringify(data))

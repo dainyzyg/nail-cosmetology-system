@@ -35,7 +35,12 @@ export default {
     }
   },
   computed: {},
-  watch: {}
+  watch: {
+    value(val) {
+      console.log('editCell')
+      this.innerHTML = val
+    }
+  }
 }
 </script>
 

@@ -1,22 +1,37 @@
 <template lang="pug">
   .check-box(@click="check")
-    i.el-icon-check(v-if="value")
+    i.el-icon-check(v-if="show")
 </template>
 
 <script>
 export default {
-  props: ['value'],
+  props: ['value', 'label'],
   created() {},
   data() {
     return {}
   },
   methods: {
     check() {
-      this.$emit('input', !this.value)
+      if (this.label) {
+        if (this.label == this.value) {
+          this.$emit('input', null)
+        } else {
+          this.$emit('input', this.label)
+        }
+      } else {
+        this.$emit('input', !this.value)
+      }
       this.$emit('change')
     }
   },
-  computed: {},
+  computed: {
+    show() {
+      if (this.label) {
+        return this.label == this.value
+      }
+      return this.value
+    }
+  },
   watch: {}
 }
 </script>

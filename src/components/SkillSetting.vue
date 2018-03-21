@@ -1,58 +1,97 @@
 <template lang="pug">
-  .page
-    .kind(v-for="i in 4")
-      .kind-title
-        |做手
-        el-select.padding(placeholder="排钟规则" size="mini")
-        el-select.padding(placeholder="预先级" size="mini")
-      .project-wrapper
-        .project(v-for="i in 6")
-          .project-line
-            .project-line-cell.title
-            .project-line-cell.t 主要
-            .project-line-cell.t 后备
-            .project-line-cell.t 最后备
-            .project-line-cell.t 标准时
-            .project-line-cell.time.t 时调
-            .project-line-cell.t 提成
-          .project-line(v-for="i in 12")
-            .project-line-cell.title 亚克去掉
-            .project-line-cell
-              //- el-checkbox
-            .project-line-cell
-              //- el-checkbox
-            .project-line-cell
-              //- el-checkbox
-            .project-line-cell(contenteditable="true") 30
-            .project-line-cell.time -10
-            .project-line-cell 20
-        .project-empty(v-for="i in 10")
+  el-dialog(title='新增技师' :visible.sync='visible' width="98vw" top="2vh" style="overflow:hidden;")
+    span(slot="title") {{technician.name}}
+    .body-wrapper
+      KindPanel(v-for="item in kindList" :kind="item" :key="item.id" :technician="technician")
+    //- .kind(v-for="i in 4")
+    //-   .kind-title
+    //-     |做手
+    //-     el-select.padding(placeholder="排钟规则" size="mini")
+    //-     el-select.padding(placeholder="预先级" size="mini")
+    //-   .project-wrapper
+    //-     .project(v-for="i in 6")
+    //-       .project-line
+    //-         .project-line-cell.title
+    //-         .project-line-cell.t 主要
+    //-         .project-line-cell.t 后备
+    //-         .project-line-cell.t 最后备
+    //-         .project-line-cell.t 标准时
+    //-         .project-line-cell.time.t 时调
+    //-         .project-line-cell.t 提成
+    //-       .project-line(v-for="i in 12")
+    //-         .project-line-cell.title 亚克去掉
+    //-         .project-line-cell
+    //-           //- el-checkbox
+    //-         .project-line-cell
+    //-           //- el-checkbox
+    //-         .project-line-cell
+    //-           //- el-checkbox
+    //-         .project-line-cell(contenteditable="true") 30
+    //-         .project-line-cell.time -10
+    //-         .project-line-cell 20
+    //-     .project-empty(v-for="i in 10")
 </template>
 <script>
+import KindPanel from '@/components/KindPanelSkill'
+
 export default {
-  data() {
-    return {}
+  components: {
+    KindPanel
   },
-  created() {},
-  methods: {}
+  props: ['value', 'technician'],
+  data() {
+    return {
+      kindList: [],
+      visible: this.value
+    }
+  },
+  created() {
+    this.getData()
+  },
+  methods: {
+    async getData() {
+      const kindList = []
+      await this.$IDB.executeTransaction('kind', 'readonly', t => {
+        const store = t.objectStore('kind')
+        const request = store.openCursor()
+        request.onsuccess = event => {
+          const cursor = event.target.result
+          if (cursor) {
+            kindList.push(cursor.value)
+            cursor.continue()
+          }
+        }
+      })
+      this.kindList = kindList
+    }
+  },
+  watch: {
+    value(val) {
+      this.visible = val
+    },
+    visible(val) {
+      this.$emit('input', val)
+    }
+  }
 }
 </script>
 <style scoped>
-.page {
-  display: block;
-  padding: 5px;
-  overflow-y: auto;
-  background-color: #fafafa;
+.el-dialog__wrapper>>>.el-dialog__body {
+  padding: 0;
 }
-.kind {
+.body-wrapper {
+  box-sizing: border-box;
+  height: calc(96vh - 51px);
+  overflow-y: auto;
+  padding-bottom: 15px;
+}
+/* .kind {
   border-radius: 4px;
-  /* box-shadow: 0 2px 7px rgba(0, 0, 0, 0.15); */
   border: 1px solid #ebebeb;
   margin-bottom: 5px;
   background-color: #fff;
 }
 .kind-title {
-  /* line-height: 40px; */
   display: flex;
   align-items: center;
   padding-left: 5px;
@@ -106,5 +145,5 @@ export default {
   justify-content: flex-end;
   align-items: center;
   writing-mode: vertical-lr;
-}
+} */
 </style>
