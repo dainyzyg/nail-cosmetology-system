@@ -46,7 +46,11 @@ export default {
       return false
     }
   },
-  watch: {}
+  watch: {
+    technician() {
+      this.skillItemTemp = {}
+    }
+  }
 }
 </script>
 

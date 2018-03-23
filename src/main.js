@@ -4,12 +4,13 @@ import 'element-ui/lib/theme-chalk/index.css'
 import App from './App.vue'
 import router from './router'
 import indexedDBPlugin from './modules/indexedDBPlugin'
-import algorithm from './modules/algorithm'
+// import algorithm from './modules/algorithm'
 
 Vue.config.productionTip = false
 
 Vue.use(indexedDBPlugin)
-Vue.use(algorithm)
+// Vue.use(algorithm)
+window.algorithm.init(Vue)
 Vue.use(ElementUI)
 /* eslint-disable no-new */
 new Vue({

@@ -194,8 +194,22 @@ export default {
       })
       await this.getOrder()
       await this.getPreAssignList()
-      // console.log('preAssignList', this.preAssignList)
-      this.orderList.sort((a, b) => a.orderDate.getTime() - b.orderDate.getTime())
+      console.log(' this.orderList', this.orderList)
+
+      this.orderList.sort((a, b) => {
+        if (a.orderDate.getTime() - b.orderDate.getTime() == 0) {
+          const standardTimeA = a.orderInfo.reduce((accumulator, currentValue) => {
+            const standardTime = currentValue.standardTimeAll || 0
+            return accumulator + standardTime
+          }, 0)
+          const standardTimeB = b.orderInfo.reduce((accumulator, currentValue) => {
+            const standardTime = currentValue.standardTimeAll || 0
+            return accumulator + standardTime
+          }, 0)
+          return standardTimeA - standardTimeB
+        }
+        return a.orderDate.getTime() - b.orderDate.getTime()
+      })
       console.time('a')
       const { preAssignList } = this.$algorithm.assign({
         technicianList: technicianListSort,
@@ -217,11 +231,41 @@ export default {
           const cursor = event.target.result
           if (cursor) {
             orderList.push(cursor.value)
+            if (cursor.value.otherFormDatas) {
+              orderList.push(
+                ...cursor.value.otherFormDatas.map(o =>
+                  Object.assign(o, {
+                    orderDate: cursor.value.orderDate,
+                    isPreorder: cursor.value.isPreorder,
+                    preorderTime: cursor.value.preorderTime,
+                    id: o.tabID
+                  })
+                )
+              )
+            }
             cursor.continue()
           }
         }
       })
+      const promiseList = []
+      orderList.forEach(orderItem => {
+        orderItem.orderInfo.forEach(orderInfoItem => {
+          promiseList.push(this.getStandardTime(orderInfoItem))
+        })
+      })
+      await Promise.all(promiseList)
       this.orderList = orderList
+    },
+    async getStandardTime(orderInfoItem) {
+      const promiseList = [this.$IDB.get('project', orderInfoItem.project.id)]
+      orderInfoItem.additions.forEach(addItem => {
+        promiseList.push(this.$IDB.get('addition', addItem.id))
+      })
+      const promiseResult = await Promise.all(promiseList)
+      orderInfoItem.standardTimeAll = promiseResult.reduce((accumulator, currentValue) => {
+        const standardTime = currentValue.standardTime || 0
+        return accumulator + standardTime
+      }, 0)
     }
   },
   computed: {

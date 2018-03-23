@@ -5,7 +5,7 @@
       el-button(style="margin-left:10px;" @click="add" icon="el-icon-circle-plus-outline" size="medium" type="primary") 新增订单
     .table-wraper
       el-table.table(:data="tableData" border height="calc(100vh - 66px)")
-        el-table-column(prop="name" label="姓名")
+        el-table-column(prop="name" label="姓名" :formatter="nameFormatter")
         el-table-column(prop="phone" label="电话")
         el-table-column(prop="orderInfo" :formatter="orderInfoFormatter" label="项目")
         el-table-column(prop="orderDate" :formatter="timeFormatter" label="订单时间" align="center" header-align="center" width="120")
@@ -28,21 +28,25 @@
         .dialog-footer(slot='footer')
           el-button(@click="addAskVisible=false") 取 消
           el-button(type='primary' @click="completeAsk") 确 定
+      .tab-title(slot="title")
+        i.el-icon-circle-plus-outline(@click="addTab")
+        el-tabs(type="card" closable v-model="tabsValue" @tab-remove="removeTab")
+          el-tab-pane(v-for="(item, index) in allFormDataList" :key="item.tabID" :label="item.name||'新用户'" :name="item.tabID")
       .dialog-body.flex-c
         el-form(:inline="true" label-width="80px")
           el-form-item(label='名称')
-            el-input(auto-complete='off' v-model="formData.name")
+            el-input(auto-complete='off' v-model="selectFormData.name")
           el-form-item(label='电话')
-            el-input(auto-complete='off' v-model="formData.phone")
+            el-input(auto-complete='off' v-model="selectFormData.phone")
           el-form-item(label='地址')
-            el-input(auto-complete='off' v-model="formData.address")
+            el-input(auto-complete='off' v-model="selectFormData.address")
           el-form-item(label='电邮')
-            el-input(auto-complete='off' v-model="formData.email")
-          el-form-item(label='下单时间')
-            el-time-picker(@focus="focus" style="margin-left:10px;" v-model="formData.orderDate" placeholder="下单时间")
-          el-form-item(label='预约')
-            el-switch(v-model="formData.isPreorder")
-            el-date-picker(type="datetime" :default-value="workBegin" v-if="formData.isPreorder" style="margin-left:10px;" v-model="formData.preorderTime" placeholder="预约时间")
+            el-input(auto-complete='off' v-model="selectFormData.email")
+          el-form-item(label='下单时间' v-if="selectFormData.tabID==='1'")
+            el-time-picker(@focus="focus" style="margin-left:10px;" v-model="selectFormData.orderDate" placeholder="下单时间")
+          el-form-item(label='预约' v-if="selectFormData.tabID==='1'")
+            el-switch(v-model="selectFormData.isPreorder")
+            el-date-picker(type="datetime" :default-value="workBegin" v-if="selectFormData.isPreorder" style="margin-left:10px;" v-model="selectFormData.preorderTime" placeholder="预约时间")
         .project-wrapper.flex
           PanelSelect(title="种类" :data="kindList" :selectedItem.sync="selectedKind" flex="0 0 100px")
           PanelSelect(title="项目" :data="projectList" :selectedItem.sync="selectedProject" flex="0 0 150px")
@@ -70,6 +74,7 @@ export default {
   },
   data() {
     return {
+      tabsValue: '1',
       accountOrderInfo: {},
       accountVisible: false,
       askResult: {},
@@ -78,7 +83,8 @@ export default {
       addVisible: false,
       dataTime: this.$algorithm.getDateNow(),
       tableData: [],
-      formData: {},
+      otherFormDatas: [],
+      formData: { tabID: '1' },
       selectedKind: {},
       selectedProject: {},
       selectedAdditions: [],
@@ -86,8 +92,8 @@ export default {
       kindList: [],
       projectList: [],
       additionList: [],
-      technicianList: [],
-      orderInfo: []
+      technicianList: []
+      // orderInfo: []
     }
   },
   created() {
@@ -96,6 +102,21 @@ export default {
     this.getKindList('kind', 'kindList')
   },
   methods: {
+    removeTab(targetName) {
+      if (targetName == '1') return
+      this.otherFormDatas = this.otherFormDatas.filter(tab => tab.tabID != targetName)
+      if (this.tabsValue == targetName) {
+        this.tabsValue = '1'
+      }
+
+      console.log(this.otherFormDatas)
+    },
+    addTab() {
+      const id = this.$getNewID + ''
+      this.otherFormDatas.push({ tabID: id, orderInfo: [] })
+      this.tabsValue = id
+      console.log(this.otherFormDatas)
+    },
     focus() {
       // clearInterval(this.st)
     },
@@ -110,8 +131,10 @@ export default {
         }
         return v
       })
-      console.log(this.formData)
-      this.orderInfo = this.formData.orderInfo
+      this.formData.tabID = '1'
+      this.otherFormDatas = this.formData.otherFormDatas || []
+      this.tabsValue = '1'
+      // this.orderInfo = this.formData.orderInfo
       this.addVisible = true
     },
     async remove(id) {
@@ -128,6 +151,11 @@ export default {
       }
       return ''
     },
+    nameFormatter(row, column, cell) {
+      const nameList = [row.name]
+      const otherFormDatas = row.otherFormDatas || []
+      return nameList.concat(otherFormDatas.map(x => x.name)).join(',')
+    },
     timeFormatter(row, column, cell) {
       if (cell) {
         return cell.toLocaleTimeString('en-GB')
@@ -136,12 +164,21 @@ export default {
     },
     async save() {
       try {
-        if (!this.formData.name) {
-          this.$alert('请输入顾客姓名！', '提示', {
-            confirmButtonText: '确定',
-            type: 'warning'
-          })
-          return
+        for (let item of this.allFormDataList) {
+          if (!item.name) {
+            this.$alert('请输入顾客姓名！', '提示', {
+              confirmButtonText: '确定',
+              type: 'warning'
+            })
+            return
+          }
+          if (item.orderInfo.length <= 0) {
+            this.$alert('请添加项目！', '提示', {
+              confirmButtonText: '确定',
+              type: 'warning'
+            })
+            return
+          }
         }
         if (this.formData.isPreorder && !this.formData.preorderTime) {
           this.$alert('请输入预约时间！', '提示', {
@@ -150,23 +187,17 @@ export default {
           })
           return
         }
-        if (this.orderInfo.length <= 0) {
-          this.$alert('请添加项目！', '提示', {
-            confirmButtonText: '确定',
-            type: 'warning'
-          })
-          return
-        }
+
         if (!this.formData.id) {
           this.formData.id = this.getNewID()
           // this.formData.orderDate = new Date()
-          this.formData.orderInfo = this.orderInfo
+          this.formData.otherFormDatas = this.otherFormDatas
           if (!this.formData.isPreorder) {
             this.formData.preorderTime = this.formData.orderDate
           }
           await this.$IDB.add('order', this.formData)
         } else {
-          this.formData.orderInfo = this.orderInfo
+          this.formData.otherFormDatas = this.otherFormDatas
           if (!this.formData.isPreorder) {
             this.formData.preorderTime = this.formData.orderDate
           }
@@ -199,7 +230,7 @@ export default {
         const orderItem = {
           kind: this.selectedKind,
           project: this.selectedProject,
-          additions: this.selectedAdditions,
+          additions: [...this.selectedAdditions],
           technicians: this.selectedTechnicians.map(item => {
             return { id: item.id, name: item.name }
           })
@@ -218,7 +249,7 @@ export default {
       const orderItem = {
         kind: this.selectedKind,
         project: this.selectedProject,
-        additions: this.selectedAdditions,
+        additions: [...this.selectedAdditions],
         technicians: this.selectedTechnicians.map(item => {
           return { id: item.id, name: item.name }
         })
@@ -231,13 +262,14 @@ export default {
         this.selectedKind = this.kindList[0]
       }
       this.selectedTechnicians = []
-      this.orderInfo = []
-      this.formData = {}
-
+      // this.orderInfo = []
+      // this.formData = {}
+      this.otherFormDatas = []
+      this.tabsValue = '1'
       const dateNow = new Date()
       const orderDate = new Date(this.dataTime)
       orderDate.setHours(dateNow.getHours(), dateNow.getMinutes(), dateNow.getSeconds())
-      this.formData = { orderDate }
+      this.formData = { orderDate, tabID: '1', orderInfo: [] }
       console.log(this.orderTime)
       this.addVisible = true
     },
@@ -316,9 +348,25 @@ export default {
     },
     selectedKind(val) {
       this.getList('project', 'projectList', val.id)
+    },
+    tabsValue(val) {
+      if (this.kindList.length) {
+        this.selectedKind = {}
+        this.selectedKind = this.kindList[0]
+      }
+      this.selectedTechnicians = []
     }
   },
   computed: {
+    orderInfo() {
+      return this.allFormDataList.find(x => x.tabID == this.tabsValue).orderInfo
+    },
+    allFormDataList() {
+      return [this.formData].concat(this.otherFormDatas)
+    },
+    selectFormData() {
+      return this.allFormDataList.find(x => x.tabID == this.tabsValue)
+    },
     dateBegin() {
       return new Date(this.dataTime.toDateString())
     },
@@ -332,6 +380,17 @@ export default {
 }
 </script>
 <style scoped>
+.tab-title i {
+  line-height: 40px;
+  font-size: 30px;
+  cursor: pointer;
+  color: #999;
+  margin-right: 10px;
+}
+.tab-title {
+  display: flex;
+  align-items: flex-start;
+}
 .btns i {
   font-size: 35px;
   margin: 20px 0;
@@ -349,7 +408,7 @@ export default {
   border-top: 1px solid #dcdfe6;
 }
 .dialog-body {
-  height: calc(96vh - 54px - 70px - 60px);
+  height: calc(96vh - 86px - 70px - 60px);
 }
 .row {
   height: 50px;

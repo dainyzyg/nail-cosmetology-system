@@ -1,4 +1,4 @@
-const algorithm = {
+window.algorithm = {
   getDateNow() {
     const date = localStorage.dateTimeNow ? new Date(localStorage.dateTimeNow) : new Date('2018/2/27')
     return date
@@ -366,40 +366,41 @@ const algorithm = {
       }
     })
     return technicianMatchList
-  }
-}
-function init(Vue) {
-  Object.defineProperty(Vue.prototype, '$clone', {
-    get() {
-      return (obj) => {
-        return JSON.parse(JSON.stringify(obj), (k, v) => {
-          if (typeof v == 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/i.test(v)) {
-            return new Date(v)
-          }
-          return v
-        })
+  },
+  init(Vue) {
+    Object.defineProperty(Vue.prototype, '$clone', {
+      get() {
+        return (obj) => {
+          return JSON.parse(JSON.stringify(obj), (k, v) => {
+            if (typeof v == 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/i.test(v)) {
+              return new Date(v)
+            }
+            return v
+          })
+        }
       }
-    }
-  })
+    })
 
-  Object.defineProperty(Vue.prototype, '$getNewID', {
-    get() {
-      const pn = performance.now()
-      const time = new Date().getTime()
-      const pnStr = `${pn.toString().replace(/\d+\.(\d*)/, '$1')}000`.substr(0, 3)
-      const timeStr = `${time}${pnStr}`
-      return parseInt(timeStr)
-    }
-  })
+    Object.defineProperty(Vue.prototype, '$getNewID', {
+      get() {
+        const pn = performance.now()
+        const time = new Date().getTime()
+        const pnStr = `${pn.toString().replace(/\d+\.(\d*)/, '$1')}000`.substr(0, 3)
+        const timeStr = `${time}${pnStr}`
+        return parseInt(timeStr)
+      }
+    })
 
-  Object.defineProperty(Vue.prototype, '$algorithm', {
-    get() {
-      return algorithm
-    }
-  })
-}
-export default {
-  install(Vue, options) {
-    init(Vue)
+    Object.defineProperty(Vue.prototype, '$algorithm', {
+      get() {
+        return algorithm
+      }
+    })
   }
 }
+
+// export default {
+//   install(Vue, options) {
+//     init(Vue)
+//   }
+// }
