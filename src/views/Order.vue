@@ -187,7 +187,13 @@ export default {
           })
           return
         }
-
+        const orderDate = new Date(this.dataTime)
+        orderDate.setHours(
+          this.formData.orderDate.getHours(),
+          this.formData.orderDate.getMinutes(),
+          this.formData.orderDate.getSeconds()
+        )
+        this.formData.orderDate = orderDate
         if (!this.formData.id) {
           this.formData.id = this.getNewID()
           // this.formData.orderDate = new Date()

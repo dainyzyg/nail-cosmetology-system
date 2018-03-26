@@ -5,6 +5,7 @@ import Order from '@/views/Order'
 import Assign from '@/views/Assign'
 import Technician from '@/views/Technician'
 import Project from '@/views/Project'
+import ProjectOld from '@/views/Project.old'
 import Attendance from '@/views/Attendance'
 import Setting from '@/views/Setting'
 
@@ -17,6 +18,7 @@ export default new Router({
     { path: '/assign', component: Assign },
     { path: '/technician', component: Technician },
     { path: '/project', component: Project },
+    { path: '/projectold', component: ProjectOld },
     { path: '/attendance', component: Attendance },
     { path: '/setting', component: Setting }
   ]
