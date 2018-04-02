@@ -60,6 +60,7 @@ export default {
     ...watch,
     dateTimeNow(val) {
       localStorage.dateTimeNow = new Date(2018, 1, 26, val.getHours(), val.getMinutes(), val.getSeconds()).toISOString()
+      this.$algorithm.timeDuration = 0
     }
   }
 }

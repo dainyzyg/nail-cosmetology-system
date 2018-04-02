@@ -8,6 +8,7 @@ import Project from '@/views/Project'
 import ProjectOld from '@/views/Project.old'
 import Attendance from '@/views/Attendance'
 import Setting from '@/views/Setting'
+import Screen from '@/views/Screen'
 
 Vue.use(Router)
 
@@ -20,6 +21,7 @@ export default new Router({
     { path: '/project', component: Project },
     { path: '/projectold', component: ProjectOld },
     { path: '/attendance', component: Attendance },
-    { path: '/setting', component: Setting }
+    { path: '/setting', component: Setting },
+    { path: '/screen', component: Screen }
   ]
 })

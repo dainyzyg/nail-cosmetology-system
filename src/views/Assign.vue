@@ -45,11 +45,20 @@ export default {
       dataTime: this.$algorithm.getDateNow(),
       preAssignList: [],
       technicianList: [],
-      orderList: []
+      orderList: [],
+      setIntervalIndex: null
     }
   },
   async created() {
+    this.setIntervalIndex = setInterval(() => {
+      this.dataTime = this.$algorithm.getDateNow()
+      console.log('-------------------------')
+      console.log(this.dataTime)
+    }, 1000)
     this.assignpProjects()
+  },
+  beforeDestroy() {
+    clearInterval(this.setIntervalIndex)
   },
   methods: {
     async cancelAdjust() {
@@ -147,7 +156,7 @@ export default {
       const beginTime = this.$algorithm.workBeginTime()
       const endTime = this.$algorithm.workEndTime()
       const duration = endTime - beginTime
-      const start = this.$algorithm.getDateNow() - beginTime
+      const start = this.dataTime - beginTime
       const left = start / duration
       return `calc(59px + (100% - 63px) * ${left})`
     },

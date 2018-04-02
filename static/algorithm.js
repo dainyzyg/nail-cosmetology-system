@@ -1,13 +1,26 @@
 window.algorithm = {
+  timeDuration: 0,
   getDateNow() {
     const date = localStorage.dateTimeNow ? new Date(localStorage.dateTimeNow) : new Date('2018/2/27')
-    return date
+    return new Date(date.getTime() + this.timeDuration)
   },
   getDateStart() {
     return new Date(this.getDateNow().toDateString())
   },
   getDateEnd() {
     return new Date(this.getDateStart().getTime() + 24 * 60 * 60 * 1000 - 1)
+  },
+  openWindow(screenName) {
+    console.log('openWindow')
+    const BrowserWindow = require('electron').remote.BrowserWindow
+    let win = new BrowserWindow({ width: 800, height: 600 })
+    win.on('closed', () => {
+      win = null
+    })
+    // win.webContents.toggleDevTools()
+    // 加载远程URL
+    win.loadURL(`atom://atom/static/${screenName}.html`)
+    // win.loadURL('http://localhost:8080')
   },
   workBeginTime() {
     const day = this.getDateNow().getDay()
@@ -359,6 +372,7 @@ window.algorithm = {
     list.forEach((item) => {
       const newPreAssignList = []
       let timeStart = new Date(0)
+      let lastTimeRelative = new Date(0) // 排除小项的上个项目完成时间，用来排序
       for (let assignItem of preAssignList) {
         if (assignItem == item) {
           break
@@ -368,6 +382,13 @@ window.algorithm = {
           assignItem.timeEnd > timeStart
         ) {
           timeStart = assignItem.timeEnd
+        }
+        if (
+          assignItem.technicianID == projectQueueItem.technicianItem.technician.id &&
+          assignItem.timeEnd > lastTimeRelative &&
+          (!item.projectItem || item.projectItem.kind.orderRule != '由后到前')
+        ) {
+          lastTimeRelative = item.timeEnd
         }
         newPreAssignList.push(assignItem)
       }
@@ -389,6 +410,7 @@ window.algorithm = {
       }
       newPreAssignList.push(jumpAssignItem)
       DoProjectJumpList.push({
+        lastTimeRelative,
         ...projectQueueItem,
         timeStart,
         preAssignList: newPreAssignList,
@@ -422,32 +444,43 @@ window.algorithm = {
         technicianTimeList.push(...DoProjectJumpList)
       }
       let lastTime = timeStart
-      let lastTimeRelative = null
+      let lastTimeRelative = new Date(0) // 排除小项的上个项目完成时间，用来排序
       technicianAssignList.forEach((item) => {
         if (lastTime < item.timeStart) {
           if (timeStart <= lastTime) {
             technicianTimeList.push({
+              lastTimeRelative,
               ...projectQueueItem,
               timeStart: new Date(lastTime),
               last: false,
               next: item
             })
           } else if (timeStart < item.timeStart && timeStart > lastTime) {
-            technicianTimeList.push({ ...projectQueueItem, timeStart: new Date(timeStart), last: false, next: item })
+            technicianTimeList.push({
+              lastTimeRelative,
+              ...projectQueueItem,
+              timeStart: new Date(timeStart),
+              last: false,
+              next: item
+            })
           }
         }
-        if (item.timeEnd <= timeStart) {
+        // if (item.timeEnd <= timeStart) {
+        //   lastTimeRelative = item.timeEnd
+        // }
+        if (!item.projectItem || item.projectItem.kind.orderRule != '由后到前') {
           lastTimeRelative = item.timeEnd
         }
         lastTime = item.timeEnd
         // console.log(projectQueueItem.technicianItem.technician.name, lastTime)
       })
 
-      if (lastTimeRelative) {
-        // console.log(projectQueueItem.technicianItem.technician.name, lastTime, timeStart)
-        projectQueueItem.technicianItem.lastWorkTime = lastTimeRelative
-      }
+      // if (lastTimeRelative) {
+      //   // console.log(projectQueueItem.technicianItem.technician.name, lastTime, timeStart)
+      //   projectQueueItem.technicianItem.lastWorkTime = lastTimeRelative
+      // }
       technicianTimeList.push({
+        lastTimeRelative,
         ...projectQueueItem,
         timeStart: new Date(Math.max(...[lastTime, timeStart])),
         last: true
@@ -457,11 +490,7 @@ window.algorithm = {
     return technicianTimeList.sort((a, b) => {
       const timeDif = a.timeStart.getTime() + a.delayTime * 60 * 1000 - b.timeStart.getTime() - b.delayTime * 60 * 1000
       if (timeDif == 0) {
-        const lastWorkTimeA = a.technicianItem.lastWorkTime ? a.technicianItem.lastWorkTime.getTime() : 0
-        const lastWorkTimeB = b.technicianItem.lastWorkTime ? b.technicianItem.lastWorkTime.getTime() : 0
-        // console.log(lastWorkTimeA, lastWorkTimeB)
-        // console.log(lastWorkTimeA - lastWorkTimeB)
-        return lastWorkTimeA - lastWorkTimeB
+        return a.lastTimeRelative - b.lastTimeRelative
       }
       return timeDif
     })
@@ -562,6 +591,9 @@ window.algorithm = {
   }
 }
 
+setInterval(() => {
+  window.algorithm.timeDuration += 10000
+}, 10000)
 // export default {
 //   install(Vue, options) {
 //     init(Vue)
