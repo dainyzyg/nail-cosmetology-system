@@ -17,6 +17,8 @@
           el-input(auto-complete='off' v-model="formData.name")
         el-form-item(label='密码')
           el-input(auto-complete='off' v-model="formData.password")
+        el-form-item(label='序号')
+          el-input-number(auto-complete='off' v-model="formData.index")
       //- el-tabs(type="border-card")
       //-   el-tab-pane(:label="item.name" :key="item.id" v-for="item in kindList")
       //-     ProjectSelect(:kind="item" :skills="skills")
@@ -70,7 +72,7 @@ export default {
       this.tableData = []
       await this.$IDB.executeTransaction('technician', 'readonly', t => {
         const store = t.objectStore('technician')
-        const request = store.openCursor()
+        const request = store.index('index').openCursor()
         request.onsuccess = event => {
           const cursor = event.target.result
           if (cursor) {
@@ -81,6 +83,7 @@ export default {
       })
     },
     async save() {
+      this.formData.index = this.formData.index || 0
       try {
         if (!this.formData.name) {
           this.$alert('请输入姓名！', '提示', {

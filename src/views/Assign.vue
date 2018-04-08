@@ -54,7 +54,7 @@ export default {
       this.dataTime = this.$algorithm.getDateNow()
       console.log('-------------------------')
       console.log(this.dataTime)
-    }, 1000)
+    }, 1000 * 60)
     this.assignpProjects()
   },
   beforeDestroy() {
@@ -272,7 +272,10 @@ export default {
       })
       const promiseResult = await Promise.all(promiseList)
       orderInfoItem.standardTimeAll = promiseResult.reduce((accumulator, currentValue) => {
-        const standardTime = currentValue.standardTime || 0
+        let standardTime = 0
+        if (currentValue && currentValue.standardTime) {
+          standardTime = currentValue.standardTime
+        }
         return accumulator + standardTime
       }, 0)
     }

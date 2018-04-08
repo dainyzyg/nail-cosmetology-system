@@ -3,8 +3,8 @@
     el-form(label-width="200px")
       el-form-item(label="当前时间")
         el-time-picker(v-model="dateTimeNow")
-      el-form-item(label='必做提前时间')
-        el-input-number(v-model="mustDoneAdvanceTime")
+      el-form-item(label='必做插队拖后时间')
+        el-input-number(v-model="mustDoneDelayTime")
       //- el-form-item(label='用户等待时间')
       //-   el-input-number(v-model="waitingTime")
       el-form-item(label='插队拖后时间')
@@ -26,7 +26,7 @@
 </template>
 <script>
 const timeArray = [
-  'mustDoneAdvanceTime',
+  'mustDoneDelayTime',
   'waitingTime',
   'delayTime',
   'minorTime',

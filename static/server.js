@@ -1,8 +1,17 @@
-var app = require('http').createServer(handler)
+var io = require('socket.io')(8888)
 
-app.listen(2222)
-
-function handler(req, res) {
-  res.writeHead(200)
-  res.end('2222')
-}
+io.on('connection', function(socket) {
+  // console.log(socket)
+  // socket.emit('news', { hello: 'world' })
+  let i = 0
+  setInterval(() => {
+    i += 1
+    socket.emit('order', i)
+  }, 2000)
+  socket.on('c', function(data, cb) {
+    console.log(data)
+    cb(null, 'qweqeqeqeqeqwe')
+    socket.emit('news', data)
+  })
+  // order setOrderState addAddition login logout
+})
