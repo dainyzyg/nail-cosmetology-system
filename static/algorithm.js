@@ -102,6 +102,7 @@ window.algorithm = {
       workListObj,
       preAssignList
     })
+
     // console.log(orderItem.name, TechnicianTimeList)
 
     for (let TechnicianTimeItem of TechnicianTimeList) {
@@ -347,7 +348,9 @@ window.algorithm = {
         return { state: 'fail' }
       }
 
-      const isDoDelay = doDelayProjectList.find((x) => x.projectID == item.projectID && x.orderID == item.orderID)
+      const isDoDelay = doDelayProjectList.find(
+        (x) => item && x.projectID == item.projectID && x.orderID == item.orderID
+      )
       const mustDoneDelayTime = parseInt(localStorage.mustDoneDelayTime) * 60 * 1000
       if (isDoDelay && item && TechnicianTimeItem.timeStart.getTime() - item.timeStart.getTime() > mustDoneDelayTime) {
         // console.log(TechnicianTimeItem.timeStart.getTime() - item.timeStart.getTime())
@@ -494,6 +497,7 @@ window.algorithm = {
       }
       let lastTime = timeStart
       let lastTimeRelative = new Date(0) // 排除小项的上个项目完成时间，用来排序
+
       technicianAssignList.forEach((item) => {
         if (lastTime < item.timeStart) {
           if (timeStart <= lastTime) {
@@ -537,9 +541,18 @@ window.algorithm = {
     }
 
     return technicianTimeList.sort((a, b) => {
-      const timeDif = a.timeStart.getTime() + a.delayTime * 60 * 1000 - b.timeStart.getTime() - b.delayTime * 60 * 1000
-      if (timeDif == 0) {
-        return a.lastTimeRelative - b.lastTimeRelative
+      let timeA = a.lastTimeRelative.getTime() + a.delayTime * 60 * 1000
+      let timeB = b.lastTimeRelative.getTime() + b.delayTime * 60 * 1000
+      if (a.projectItem.kind.orderRule == '由后到前') {
+        timeA = a.timeStart.getTime() + a.delayTime * 60 * 1000
+      }
+      if (b.projectItem.kind.orderRule == '由后到前') {
+        timeB = b.timeStart.getTime() + b.delayTime * 60 * 1000
+      }
+      // return a.lastTimeRelative - b.lastTimeRelative
+      const timeDif = timeA - timeB
+      if (timeDif == 0 && a.projectItem.kind.orderRule == '由后到前' && b.projectItem.kind.orderRule == '由后到前') {
+        return b.lastTimeRelative - a.lastTimeRelative
       }
       return timeDif
     })
