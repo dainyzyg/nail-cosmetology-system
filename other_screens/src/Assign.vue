@@ -1,8 +1,7 @@
 <template lang="pug">
   .page.col
-    .breadcrumb-wraper
-      .placeholder
-      el-date-picker(v-model="dataTime" type="date" placeholder="选择日期" :clearable="false" size="large")
+    .breadcrumb-wraper 排 钟 屏 幕
+      //- el-date-picker(v-model="dataTime" type="date" placeholder="选择日期" :clearable="false" size="large")
     .table-wraper
       .mark
         //- .tec-name
@@ -16,35 +15,16 @@
         .project-item(@click="openInfo(pi)" v-for="pi in getWorkList(t.id)" :style="getPIStyle(pi)")
           .project-item-line(v-for="i in getOrderInfo(pi)") {{i}}
       .time-now(:style="{left:getTimeNow()}")
-    el-dialog(title='订单详情' :visible.sync='setVisible')
-      el-form(label-width="80px" :inline="true")
-        .form-line {{selectedInfo}}
-        el-form-item(label='开始时间')
-          el-time-picker(v-model="selectedItem.timeStart" style="width:200px")
-        el-form-item(label='结束时间')
-          el-time-picker(v-model="selectedItem.timeEnd" style="width:200px")
-        el-form-item(label='技师')
-          el-select(v-model="selectedItem.technicianID" placeholder="请选择")
-            el-option(v-for="item in technicianList" :key="item.id" :label="item.name" :value="item.id")
-        el-form-item(label='状态')
-          el-radio-group(v-model="selectedItem.state" size="medium")
-            el-radio-button(label="unstart") 未开始
-            el-radio-button(label="starting") 进行中
-            el-radio-button(label="complete") 结束
-            el-radio-button(label="checkout") 已结账
-      .dialog-footer(slot='footer')
-        el-button(@click="setVisible=false") 取 消
-        el-button(type='danger' @click="cancelAdjust") 撤销调整
-        el-button(type='primary' @click="adjust") 调整
 </template>
 <script>
 export default {
   data() {
     return {
+      db: null,
       selectedInfo: '',
       selectedItem: {},
       setVisible: false,
-      dataTime: this.$algorithm.getDateNow(),
+      dataTime: new Date(),
       preAssignList: [],
       technicianList: [],
       orderList: [],
@@ -55,7 +35,7 @@ export default {
     window.ipcRenderer.on('asynchronous-reply', this.getData)
     // this.getTechnicianList()
     // this.setIntervalIndex = setInterval(() => {
-    //   this.dataTime = this.$algorithm.getDateNow()
+    //   this.dataTime = new Date()
     //   console.log('-------------------------')
     //   console.log(this.dataTime)
     // }, 1000 * 60)
@@ -63,15 +43,39 @@ export default {
     // this.assignpProjects()
   },
   beforeDestroy() {
-    // clearInterval(this.setIntervalIndex)
+    clearInterval(this.setIntervalIndex)
     window.ipcRenderer.removeListener('asynchronous-reply', this.getData)
   },
   methods: {
     async getData() {
-      const r = await this.$algorithm.getAssignList()
-      this.technicianList = r.technicianList
-      this.preAssignList = r.preAssignList
-      this.dataTime = r.dateNow
+      if (!this.db) {
+        const openRequest = indexedDB.open('MyDatabase')
+        openRequest.onerror = event => {
+          console.log(event, event.target.error.message)
+        }
+        openRequest.onsuccess = event => {
+          this.db = event.target.result
+          const t = this.db.transaction('assignList')
+          const request = t.objectStore('assignList').get(new Date('2018/2/26'))
+          request.onsuccess = e => {
+            const r = e.target.result
+            console.log({ r })
+            this.technicianList = r.technicianList
+            this.preAssignList = r.preAssignList
+            this.dataTime = r.dateNow
+          }
+        }
+      } else {
+        const t = this.db.transaction('assignList')
+        const request = t.objectStore('assignList').get(new Date('2018/2/26'))
+        request.onsuccess = e => {
+          const r = e.target.result
+          console.log({ r })
+          this.technicianList = r.technicianList
+          this.preAssignList = r.preAssignList
+          this.dataTime = r.dateNow
+        }
+      }
     },
     async cancelAdjust() {
       const { orderID, projectID } = this.selectedItem
@@ -83,9 +87,9 @@ export default {
       console.log(this.selectedItem)
 
       this.selectedItem.isAdjust = true
-      // this.selectedItem.timeEnd = new Date(
-      //   this.selectedItem.timeStart.getTime() + this.selectedItem.duration * 60 * 1000
-      // )
+      this.selectedItem.timeEnd = new Date(
+        this.selectedItem.timeStart.getTime() + this.selectedItem.duration * 60 * 1000
+      )
       await this.$IDB.put('assign', this.selectedItem)
 
       await Promise.all(
@@ -165,8 +169,8 @@ export default {
       return list
     },
     getTimeNow() {
-      const beginTime = this.$algorithm.workBeginTime()
-      const endTime = this.$algorithm.workEndTime()
+      const beginTime = this.workBeginTime
+      const endTime = this.workEndTime
       const duration = endTime - beginTime
       const start = this.dataTime - beginTime
       const left = start / duration
@@ -204,9 +208,7 @@ export default {
         background
       }
     },
-    async assignpProjects() {
-      this.$algorithm.assignpProjects()
-    },
+    async assignpProjects() {},
     async assignpProjects1() {
       await this.getTechnicianList()
       const technicianListSort = []
@@ -371,12 +373,15 @@ export default {
   border-bottom: 1px solid #909399;
 }
 .breadcrumb-wraper {
+  color: #444;
+  font-size: 22px;
+  font-weight: bold;
   padding-left: 15px;
   padding-right: 15px;
   display: flex;
-  flex: 0 0 50px;
+  flex: 0 0 30px;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   border-bottom: 1px solid #eaeefb;
 }
 .table-wraper {

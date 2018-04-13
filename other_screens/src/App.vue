@@ -1,10 +1,20 @@
 <template lang="pug">
- div aaaa
+ div {{a}}
 </template>
 
 <script>
 export default {
-  name: 'App'
+  name: 'App',
+  data() {
+    return {
+      a: 'aaa'
+    }
+  },
+  async created() {
+    window.ipcRenderer.on('asynchronous-reply', (event, arg) => {
+      this.a = arg // prints "pong"
+    })
+  }
 }
 </script>
 

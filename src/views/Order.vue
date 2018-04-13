@@ -140,6 +140,7 @@ export default {
     async remove(id) {
       await this.$IDB.delete('order', id)
       this.getData()
+      this.$algorithm.assignpProjects()
     },
     orderInfoFormatter(row, column, cell) {
       if (cell) {
@@ -211,6 +212,7 @@ export default {
         }
         this.addVisible = false
         this.getData()
+        this.$algorithm.assignpProjects()
       } catch (e) {
         this.$alert(e.message, '错误提示', {
           confirmButtonText: '确定',

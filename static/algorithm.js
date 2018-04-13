@@ -1,3 +1,8 @@
+const { ipcRenderer } = require('electron')
+ipcRenderer.on('asynchronous-reply', (event, arg) => {
+  console.log(arg) // prints "pong"
+})
+window.ipcRenderer = ipcRenderer
 window.algorithm = {
   timeDuration: 0,
   getDateNow() {
@@ -17,7 +22,7 @@ window.algorithm = {
     win.on('closed', () => {
       win = null
     })
-    // win.webContents.toggleDevTools()
+    win.webContents.toggleDevTools()
     // 加载远程URL
     win.loadURL(`atom://atom/static/${screenName}.html`)
     // win.loadURL('http://localhost:8080')
@@ -41,6 +46,146 @@ window.algorithm = {
       time = parseInt(localStorage.weekendEndTime)
     }
     return new Date(this.getDateStart().getTime() + time * 60 * 60 * 1000)
+  },
+  async getTechnicianList() {
+    const attendanceInfo = {}
+    const technicianList = []
+    const dateBegin = this.getDateStart()
+    await window.IDB.executeTransaction(['attendance', 'technician'], 'readonly', (t) => {
+      const store = t.objectStore('attendance')
+      const request = store.index('date').openCursor(IDBKeyRange.only(dateBegin))
+      request.onsuccess = (event) => {
+        const cursor = event.target.result
+        if (cursor) {
+          if (cursor.value.isAttend) {
+            attendanceInfo[cursor.value.id] = cursor.value
+            const getTechnicianRequest = t.objectStore('technician').get(cursor.value.id)
+            getTechnicianRequest.onsuccess = (e) => {
+              if (e.target.result) {
+                e.target.result.attendanceInfo = cursor.value
+                technicianList.push(e.target.result)
+              }
+            }
+          }
+          cursor.continue()
+        }
+      }
+    })
+    return technicianList.sort((a, b) => a.index - b.index)
+  },
+  async getOrder() {
+    const orderList = []
+    const dateBegin = this.getDateStart()
+    const dateEnd = this.getDateEnd()
+    await window.IDB.executeTransaction(['order'], 'readonly', (t) => {
+      const store = t.objectStore('order')
+      const request = store.index('preorderTime').openCursor(IDBKeyRange.bound(dateBegin, dateEnd))
+      request.onsuccess = (event) => {
+        const cursor = event.target.result
+        if (cursor) {
+          orderList.push(cursor.value)
+          if (cursor.value.otherFormDatas) {
+            orderList.push(
+              ...cursor.value.otherFormDatas.map((o) =>
+                Object.assign(o, {
+                  orderDate: cursor.value.orderDate,
+                  isPreorder: cursor.value.isPreorder,
+                  preorderTime: cursor.value.preorderTime,
+                  id: o.tabID
+                })
+              )
+            )
+          }
+          cursor.continue()
+        }
+      }
+    })
+    const promiseList = []
+    orderList.forEach((orderItem) => {
+      orderItem.orderInfo.forEach((orderInfoItem) => {
+        promiseList.push(this.getStandardTime(orderInfoItem))
+      })
+    })
+    await Promise.all(promiseList)
+    return orderList
+  },
+  async getStandardTime(orderInfoItem) {
+    const promiseList = [window.IDB.get('project', orderInfoItem.project.id)]
+    orderInfoItem.additions.forEach((addItem) => {
+      promiseList.push(window.IDB.get('addition', addItem.id))
+    })
+    const promiseResult = await Promise.all(promiseList)
+    orderInfoItem.standardTimeAll = promiseResult.reduce((accumulator, currentValue) => {
+      let standardTime = 0
+      if (currentValue && currentValue.standardTime) {
+        standardTime = currentValue.standardTime
+      }
+      return accumulator + standardTime
+    }, 0)
+  },
+  async getAssignList() {
+    const dateBegin = this.getDateStart()
+    const assignList = await window.IDB.get('assignList', dateBegin)
+    return assignList
+  },
+  async getPreAssignList() {
+    const preAssignList = []
+    const dateBegin = this.getDateStart()
+    await window.IDB.executeTransaction(['assign'], 'readonly', (t) => {
+      const store = t.objectStore('assign')
+      const request = store.index('date').openCursor(IDBKeyRange.only(dateBegin))
+      request.onsuccess = (event) => {
+        const cursor = event.target.result
+        if (cursor) {
+          preAssignList.push(cursor.value)
+          cursor.continue()
+        }
+      }
+    })
+    return preAssignList
+  },
+  async assignpProjects() {
+    const technicianList = await this.getTechnicianList()
+    const technicianListSort = []
+    technicianList.forEach((i) => {
+      technicianListSort.push({
+        technician: i,
+        startTime: i.lastWorkTime || new Date(0)
+      })
+    })
+    const orderList = await this.getOrder()
+    const preAssignList = await this.getPreAssignList()
+
+    orderList.sort((a, b) => {
+      if (a.orderDate.getTime() - b.orderDate.getTime() == 0) {
+        const standardTimeA = a.orderInfo.reduce((accumulator, currentValue) => {
+          const standardTime = currentValue.standardTimeAll || 0
+          return accumulator + standardTime
+        }, 0)
+        const standardTimeB = b.orderInfo.reduce((accumulator, currentValue) => {
+          const standardTime = currentValue.standardTimeAll || 0
+          return accumulator + standardTime
+        }, 0)
+        return standardTimeA - standardTimeB
+      }
+      return a.orderDate.getTime() - b.orderDate.getTime()
+    })
+    console.time('a')
+    const r = this.assign({
+      technicianList: technicianListSort,
+      orderList: orderList,
+      level: 1,
+      preAssignList: preAssignList,
+      workListObj: {}
+    })
+    const assignList = {
+      preAssignList: r.preAssignList,
+      technicianList,
+      date: this.getDateStart(),
+      dateNow: this.getDateNow()
+    }
+    await window.IDB.put('assignList', assignList)
+    ipcRenderer.send('asynchronous-message', 'ping')
   },
   assign({ technicianList, orderList, level, preAssignList, workListObj, historyPreAssignList, doDelayProjectList }) {
     historyPreAssignList = historyPreAssignList || {}
@@ -381,6 +526,7 @@ window.algorithm = {
         p.timeStart > assignItem.timeStart &&
         p.earliestOrderTime < assignItem.earliestOrderTime
       ) {
+        // debugger
         // 判断即技师能是否匹配，能否互换
         // 项目一样 附加一样   将数组排序然后转换成字符串
         const pAdditionsStr = JSON.stringify(p.projectItem.additions.map((m) => m.id).sort((a, b) => a - b))
@@ -396,12 +542,13 @@ window.algorithm = {
     }
 
     if (reAssignItem) {
-      assignItem.technicianName = reAssignItem.technicianName
-      assignItem.technicianID = reAssignItem.technicianID
-      assignItem.timeStart = reAssignItem.timeStart
-      assignItem.timeEnd = reAssignItem.timeEnd
-      assignItem.duration = reAssignItem.duration
-      newPreAssignList.push(assignItem)
+      const item = this.clone(reAssignItem)
+      item.technicianName = assignItem.technicianName
+      item.technicianID = assignItem.technicianID
+      item.timeStart = assignItem.timeStart
+      item.timeEnd = assignItem.timeEnd
+      item.duration = assignItem.duration
+      newPreAssignList.push(item)
       return {
         state: 'reassign',
         preAssignList: newPreAssignList
@@ -621,7 +768,21 @@ window.algorithm = {
     })
     return technicianMatchList
   },
+  clone(obj) {
+    return JSON.parse(JSON.stringify(obj), (k, v) => {
+      if (typeof v == 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/i.test(v)) {
+        return new Date(v)
+      }
+      return v
+    })
+  },
   init(Vue) {
+    this.assignpProjects()
+    setInterval(() => {
+      window.algorithm.timeDuration += 1000 * 60
+      this.assignpProjects()
+    }, 1000 * 60)
+
     Object.defineProperty(Vue.prototype, '$clone', {
       get() {
         return (obj) => {
@@ -653,9 +814,6 @@ window.algorithm = {
   }
 }
 
-setInterval(() => {
-  window.algorithm.timeDuration += 10000
-}, 10000)
 // export default {
 //   install(Vue, options) {
 //     init(Vue)

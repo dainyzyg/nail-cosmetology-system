@@ -37,6 +37,8 @@
       flex: 1;
       align-items: stretch;
       overflow: hidden;
+      width: 100vw;
+      height: 100vh;
     }
 
     .page.col {
@@ -57,10 +59,12 @@
 </head>
 
 <body>
-  <h1>排钟显示测试</h1>
   <div id="app"></div>
 </body>
 
 </html>
+<script>
+  window.ipcRenderer = require('electron').ipcRenderer
+</script>
 <script src="vue.js"></script>
 <script src="dist/big.js"></script>

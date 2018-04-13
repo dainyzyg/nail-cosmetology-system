@@ -1,4 +1,4 @@
-import App from './App.vue'
+import App from './Assign.vue'
 
 /* eslint-disable no-new */
 new window.Vue({
