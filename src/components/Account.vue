@@ -7,7 +7,7 @@
       //-   el-tab-pane(label="消息中心")
       //-   el-tab-pane(label="消息中心")
       .content(v-for="i in orderList")
-        Tip(:data="i")
+        Tip(:data="i" :technician="getTechnician(i.project.id)")
     .dialog-footer(slot='footer')
       el-button(@click="cancel") 取 消
       el-button(type='primary' @click="comfirm") 结 账
@@ -24,6 +24,9 @@ export default {
     data: {
       default: {}
     },
+    preAssignItems: {
+      default: []
+    },
     visible: {
       default: false
     },
@@ -31,13 +34,27 @@ export default {
       default: '1'
     }
   },
-  created() {},
+  created() {
+    console.log('account')
+    window.ipcRenderer.on('receive-fee', this.receiveFee)
+  },
+  beforeDestroy() {
+    // clearInterval(this.setIntervalIndex)
+    window.ipcRenderer.removeListener('receive-fee', this.receiveFee)
+  },
   data() {
     return {
       dialogVisible: false
     }
   },
   methods: {
+    receiveFee(event, arg) {
+      console.log(arg)
+    },
+    getTechnician(projectID) {
+      const item = this.preAssignItems.find(x => x.projectID == projectID)
+      return item.technicianName
+    },
     comfirm() {},
     cancel() {
       this.$emit('update:visible', false)

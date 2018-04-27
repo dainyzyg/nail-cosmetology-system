@@ -159,7 +159,7 @@ export default {
     getOrderInfo(pi) {
       const list = []
       const time = `${this.getTimeString(pi.timeStart)}-${this.getTimeString(pi.timeEnd)}`
-      list.push(`${pi.orderName}`)
+      list.push(`${pi.number} ${pi.orderName}`)
       list.push(`${time}`)
       list.push(`${pi.projectName}`)
       return list

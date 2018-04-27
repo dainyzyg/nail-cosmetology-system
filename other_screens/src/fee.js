@@ -1,3 +1,7 @@
-let a = 1
-a = 'hello'
-console.log(a)
+import App from './Fee.vue'
+
+/* eslint-disable no-new */
+new window.Vue({
+  el: '#app',
+  render: (h) => h(App)
+})

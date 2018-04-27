@@ -12,7 +12,11 @@ export default {
   created() {},
   methods: {
     open(screenName) {
-      this.$algorithm.openWindow(screenName)
+      if (screenName == 'fee-screen') {
+        this.$algorithm.openWindow(screenName, { width: 1024, height: 768 })
+      } else {
+        this.$algorithm.openWindow(screenName, { width: 1024, height: 768 })
+      }
     }
   },
   watch: {}

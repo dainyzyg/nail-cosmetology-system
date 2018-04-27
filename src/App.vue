@@ -20,6 +20,9 @@
         el-menu-item(index='/screen')
           i.el-icon-picture
           span(slot='title') 屏幕管理
+        el-menu-item(index='/fee')
+          i.el-icon-setting
+          span(slot='title') 小费设置
         el-menu-item(index='/setting')
           i.el-icon-setting
           span(slot='title') 设置

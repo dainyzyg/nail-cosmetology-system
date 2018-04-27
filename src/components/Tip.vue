@@ -12,7 +12,7 @@
         .info-value ${{sumv}}
     .number.flex-c
       .tip
-        .tip-title 技师：andy 小费：
+        .tip-title 技师：{{technician}} 小费：
         .tip-value {{fee}}
       .number-line.flex(v-for="row in 3")
         .numberBtn(v-for="col in 3" @click="tap((row-1)*3+col)") {{(row-1)*3+col}}
@@ -25,6 +25,9 @@
 <script>
 export default {
   props: {
+    technician: {
+      default: ''
+    },
     data: {
       default: {}
     },

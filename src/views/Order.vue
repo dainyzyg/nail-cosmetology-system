@@ -58,7 +58,7 @@
       .dialog-footer(slot='footer')
         el-button(@click="addVisible=false") 取 消
         el-button(type='primary' @click="save") 确 定
-    Account(:visible.sync="accountVisible" :data="accountOrderInfo")
+    Account(:visible.sync="accountVisible" :data="accountOrderInfo" :preAssignItems="preAssignItems")
 
 </template>
 <script>
@@ -92,16 +92,27 @@ export default {
       kindList: [],
       projectList: [],
       additionList: [],
-      technicianList: []
+      technicianList: [],
+      preAssignList: []
       // orderInfo: []
     }
   },
   created() {
+    window.ipcRenderer.on('asynchronous-reply', this.getPreAssignList)
+    this.getPreAssignList()
     this.getData()
     this.getKindList('technician', 'technicianList')
     this.getKindList('kind', 'kindList')
   },
+  beforeDestroy() {
+    // clearInterval(this.setIntervalIndex)
+    window.ipcRenderer.removeListener('asynchronous-reply', this.getPreAssignList)
+  },
   methods: {
+    async getPreAssignList() {
+      const r = await this.$algorithm.getAssignList()
+      this.preAssignList = r.preAssignList
+    },
     removeTab(targetName) {
       if (targetName == '1') return
       this.otherFormDatas = this.otherFormDatas.filter(tab => tab.tabID != targetName)
@@ -123,6 +134,7 @@ export default {
     account(data) {
       this.accountOrderInfo = data
       this.accountVisible = true
+      window.ipcRenderer.send('notice-fee-screen', { preAssignItems: this.preAssignItems })
     },
     async edit(data) {
       this.formData = JSON.parse(JSON.stringify(data), (k, v) => {
@@ -366,6 +378,11 @@ export default {
     }
   },
   computed: {
+    preAssignItems() {
+      const preAssignItems = this.preAssignList.filter(x => x.orderID == this.accountOrderInfo.id)
+      console.log({ preAssignItems, accountOrderInfo: this.accountOrderInfo })
+      return preAssignItems
+    },
     orderInfo() {
       return this.allFormDataList.find(x => x.tabID == this.tabsValue).orderInfo
     },

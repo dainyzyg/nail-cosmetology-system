@@ -215,7 +215,7 @@ function initIndexedDB(Vue) {
       return IDB
     }
   })
-  const openRequest = indexedDB.open('MyDatabase', 10)
+  const openRequest = indexedDB.open('MyDatabase', 11)
   openRequest.onerror = (event) => {
     console.log(event, event.target.error.message)
   }
@@ -234,6 +234,7 @@ function initIndexedDB(Vue) {
     createStoreAndIndex(event, 'attendance', ['date'], { keyPath: ['id', 'date'] })
     createStoreAndIndex(event, 'assign', ['date'], { keyPath: ['orderID', 'projectID'] })
     createStoreAndIndex(event, 'assignList', [], { keyPath: 'date' })
+    createStoreAndIndex(event, 'feeInfo', [], { keyPath: 'percentage' })
   }
 }
 window.IDB = IDB
