@@ -3039,6 +3039,12 @@ if (hadRuntime) {
 //
 //
 //
+//
+//
+//
+//
+//
+//
 
 
 
@@ -3051,7 +3057,8 @@ if (hadRuntime) {
       feeInfo: [],
       orderInfo: [],
       projectIndex: 0,
-      fee: 0
+      fee: 0,
+      numberPadShow: false
     };
   },
   created: function created() {
@@ -3075,16 +3082,32 @@ if (hadRuntime) {
   },
 
   methods: {
+    numberChange: function numberChange(number) {
+      this.$set(this.projectInfo, 'tip', number);
+    },
+    isfocus: function isfocus(index) {
+      return index == this.projectIndex;
+    },
     getAmount: function getAmount(projectItem) {
       var price = projectItem.project.price || 0;
       projectItem.additions.forEach(function (a) {
         var p = a.price || 0;
         price += p;
       });
+      price += projectItem.tip || 0;
       return price.toFixed(2);
     },
     select: function select(percentage) {
-      this.fee = this.projectAccount * percentage / 100;
+      // this.fee = this.projectAccount * percentage / 100
+      this.$set(this.projectInfo, 'tip', this.projectAccount * percentage / 100);
+      // this.next()
+    },
+    next: function next() {
+      if (this.projectIndex == this.orderInfo.length - 1) {
+        // this.projectIndex = 0
+      } else {
+        this.projectIndex += 1;
+      }
     },
     getFeeInfo: function getFeeInfo() {
       var _this2 = this;
@@ -3110,15 +3133,31 @@ if (hadRuntime) {
       console.log(this.feeInfo);
     },
     confirm: function confirm() {
+      console.log(this.orderInfo);
       window.ipcRenderer.send('send-fee', 998);
     },
     receiveOrderInfo: function receiveOrderInfo(event, arg) {
       console.log('receiveOrderInfo');
       this.orderInfo = arg.preAssignItems;
+      this.projectIndex = 0;
       console.log(arg.preAssignItems);
     }
   },
   computed: {
+    totalAccount: function totalAccount() {
+      var total = 0;
+      this.orderInfo.forEach(function (item) {
+        var projectItem = item.projectItem;
+        var price = projectItem.project.price || 0;
+        projectItem.additions.forEach(function (a) {
+          var p = a.price || 0;
+          price += p;
+        });
+        price += projectItem.tip || 0;
+        total += price;
+      });
+      return total.toFixed(2);
+    },
     projectAccount: function projectAccount() {
       var price = this.projectInfo.project.price || 0;
       this.projectInfo.additions.forEach(function (a) {
@@ -3126,6 +3165,9 @@ if (hadRuntime) {
         price += p;
       });
       return price;
+    },
+    projectFee: function projectFee() {
+      return this.projectInfo.tip || 0;
     },
     projectInfo: function projectInfo() {
       if (this.orderInfo[this.projectIndex] && this.orderInfo[this.projectIndex].projectItem) {
@@ -3174,11 +3216,14 @@ if (hadRuntime) {
 //
 //
 //
+//
 
 /* harmony default export */ __webpack_exports__["a"] = ({
+  props: ['show'],
   data: function data() {
     return {
-      a: 'aaa'
+      a: 'aaa',
+      number: '0'
     };
   },
   created: function created() {
@@ -3201,11 +3246,32 @@ if (hadRuntime) {
   },
 
   methods: {
+    inputNumber: function inputNumber(i) {
+      if (i == '.') {
+        if (this.number.search(/\./) < 0) {
+          this.number = '' + this.number + i;
+        }
+      } else if (this.number == '0') {
+        this.number = '' + i;
+      } else {
+        this.number = '' + this.number + i;
+      }
+    },
+    close: function close() {
+      this.$emit('update:show', false);
+    },
     confirm: function confirm() {
-      window.ipcRenderer.send('send-fee', 998);
+      this.$emit('numberChange', Number(this.number));
+      this.$emit('update:show', false);
+      // window.ipcRenderer.send('send-fee', 998)
     },
     receiveOrderInfo: function receiveOrderInfo(event, arg) {
       console.log(arg);
+    }
+  },
+  watch: {
+    show: function show(val) {
+      this.number = '0';
     }
   }
 });
@@ -3333,7 +3399,7 @@ exports = module.exports = __webpack_require__(36)(false);
 
 
 // module
-exports.push([module.i, "\n.project-info-item-title[data-v-516ac168] {\n  display: -webkit-box;\n  display: -ms-flexbox;\n  display: flex;\n  -webkit-box-pack: center;\n      -ms-flex-pack: center;\n          justify-content: center;\n  padding-bottom: 2px;\n}\n.project-info-item-line[data-v-516ac168] {\n  display: -webkit-box;\n  display: -ms-flexbox;\n  display: flex;\n  -webkit-box-pack: justify;\n      -ms-flex-pack: justify;\n          justify-content: space-between;\n}\n.project-info-item.focus[data-v-516ac168] {\n  border: 1px solid slategray;\n}\n.project-info-item[data-v-516ac168] {\n  padding: 2px 5px;\n  -webkit-box-flex: 0;\n      -ms-flex: 0 0 160px;\n          flex: 0 0 160px;\n  border: 1px solid #ebebeb;\n  -webkit-box-shadow: 0 0 8px 0 rgba(232, 237, 250, 0.6), 0 2px 4px 0 rgba(232, 237, 250, 0.5);\n          box-shadow: 0 0 8px 0 rgba(232, 237, 250, 0.6), 0 2px 4px 0 rgba(232, 237, 250, 0.5);\n  /* border: 1px solid slategray; */\n  border-radius: 10px;\n  margin-right: 10px;\n  margin-bottom: 10px;\n}\n.feeInfos[data-v-516ac168] {\n  display: -webkit-box;\n  display: -ms-flexbox;\n  display: flex;\n  -ms-flex-wrap: wrap;\n      flex-wrap: wrap;\n}\n.detail[data-v-516ac168] {\n  display: -webkit-box;\n  display: -ms-flexbox;\n  display: flex;\n  -webkit-box-flex: 1;\n      -ms-flex: 1;\n          flex: 1;\n  -webkit-box-align: stretch;\n      -ms-flex-align: stretch;\n          align-items: stretch;\n}\n.content-page[data-v-516ac168] {\n  -webkit-box-flex: 1;\n      -ms-flex: 1;\n          flex: 1;\n  display: -webkit-box;\n  display: -ms-flexbox;\n  display: flex;\n  -webkit-box-pack: center;\n      -ms-flex-pack: center;\n          justify-content: center;\n  -webkit-box-align: center;\n      -ms-flex-align: center;\n          align-items: center;\n  font-size: 10vw;\n  font-weight: bolder;\n}\n.page[data-v-516ac168] {\n  color: slategray;\n  -webkit-box-sizing: border-box;\n          box-sizing: border-box;\n  background: #fff;\n  padding: 10px;\n}\n.info[data-v-516ac168] {\n  -webkit-box-flex: 0;\n      -ms-flex: 0 0 250px;\n          flex: 0 0 250px;\n  margin-right: 10px;\n}\n.select-wrapper[data-v-516ac168] {\n  -webkit-box-flex: 1;\n      -ms-flex: 1;\n          flex: 1;\n}\n.border[data-v-516ac168] {\n  border: 1px solid #ebebeb;\n  -webkit-box-shadow: 0 0 8px 0 rgba(232, 237, 250, 0.6), 0 2px 4px 0 rgba(232, 237, 250, 0.5);\n          box-shadow: 0 0 8px 0 rgba(232, 237, 250, 0.6), 0 2px 4px 0 rgba(232, 237, 250, 0.5);\n  border-radius: 8px;\n}\n.title[data-v-516ac168] {\n  height: 35px;\n  display: -webkit-box;\n  display: -ms-flexbox;\n  display: flex;\n  -webkit-box-pack: center;\n      -ms-flex-pack: center;\n          justify-content: center;\n  -webkit-box-align: center;\n      -ms-flex-align: center;\n          align-items: center;\n  font-weight: bolder;\n  border-bottom: 1px solid #ebebeb;\n}\n.info-line[data-v-516ac168] {\n  font-size: 17px;\n  line-height: 30px;\n  display: -webkit-box;\n  display: -ms-flexbox;\n  display: flex;\n  -webkit-box-pack: justify;\n      -ms-flex-pack: justify;\n          justify-content: space-between;\n}\n.info-title[data-v-516ac168] {\n}\n.info-value[data-v-516ac168] {\n}\n.total[data-v-516ac168] {\n  border-top: 1px dashed slategray;\n}\n.project[data-v-516ac168] {\n  border-bottom: 1px dashed slategray;\n}\n.content[data-v-516ac168] {\n  padding: 5px;\n}\n.option-item[data-v-516ac168] {\n  color: white;\n  font-size: 18px;\n  display: -webkit-box;\n  display: -ms-flexbox;\n  display: flex;\n  -webkit-box-pack: center;\n      -ms-flex-pack: center;\n          justify-content: center;\n  -webkit-box-align: center;\n      -ms-flex-align: center;\n          align-items: center;\n  padding: 0 20px;\n  height: 50px;\n  border: 2px solid slategray;\n  border-radius: 8px;\n  margin: 25px;\n  background: slategray;\n}\n.option-item[data-v-516ac168]:active {\n  background: white;\n  color: slategray;\n}\n.percentage[data-v-516ac168] {\n  -webkit-box-flex: 0;\n      -ms-flex: 0 0 100px;\n          flex: 0 0 100px;\n}\n.fee[data-v-516ac168] {\n  -webkit-box-flex: 0;\n      -ms-flex: 0 0 100px;\n          flex: 0 0 100px;\n}\n.des[data-v-516ac168] {\n  -webkit-box-flex: 1;\n      -ms-flex: 1;\n          flex: 1;\n}\n", ""]);
+exports.push([module.i, "\n.slide-left-enter-active[data-v-516ac168],\n.slide-left-leave-active[data-v-516ac168],\n.slide-right-enter-active[data-v-516ac168],\n.slide-right-leave-active[data-v-516ac168] {\n  -webkit-transition: all 0.2s ease-in-out;\n  transition: all 0.2s ease-in-out;\n}\n.slide-left-enter[data-v-516ac168],\n.slide-left-leave-to[data-v-516ac168] {\n  -webkit-transform: translate3d(100%, 0, 0);\n          transform: translate3d(100%, 0, 0);\n}\n.slide-right-enter[data-v-516ac168],\n.slide-right-leave-to[data-v-516ac168] {\n  -webkit-transform: translate3d(-100%, 0, 0);\n          transform: translate3d(-100%, 0, 0);\n}\n.project-info-item-title[data-v-516ac168] {\n  display: -webkit-box;\n  display: -ms-flexbox;\n  display: flex;\n  -webkit-box-pack: center;\n      -ms-flex-pack: center;\n          justify-content: center;\n  padding-bottom: 2px;\n}\n.project-info-item-line[data-v-516ac168] {\n  display: -webkit-box;\n  display: -ms-flexbox;\n  display: flex;\n  -webkit-box-pack: justify;\n      -ms-flex-pack: justify;\n          justify-content: space-between;\n}\n.project-info-item.focus[data-v-516ac168] {\n  border: 2px solid slategray;\n}\n.project-info-item[data-v-516ac168] {\n  padding: 2px 5px;\n  -webkit-box-flex: 0;\n      -ms-flex: 0 0 160px;\n          flex: 0 0 160px;\n  border: 1px solid #ebebeb;\n  -webkit-box-shadow: 0 0 8px 0 rgba(232, 237, 250, 0.6), 0 2px 4px 0 rgba(232, 237, 250, 0.5);\n          box-shadow: 0 0 8px 0 rgba(232, 237, 250, 0.6), 0 2px 4px 0 rgba(232, 237, 250, 0.5);\n  /* border: 1px solid slategray; */\n  border-radius: 10px;\n  margin-right: 10px;\n  margin-bottom: 10px;\n}\n.feeInfos[data-v-516ac168] {\n  display: -webkit-box;\n  display: -ms-flexbox;\n  display: flex;\n  -ms-flex-wrap: wrap;\n      flex-wrap: wrap;\n}\n.detail[data-v-516ac168] {\n  display: -webkit-box;\n  display: -ms-flexbox;\n  display: flex;\n  -webkit-box-flex: 1;\n      -ms-flex: 1;\n          flex: 1;\n  -webkit-box-align: stretch;\n      -ms-flex-align: stretch;\n          align-items: stretch;\n}\n.content-page[data-v-516ac168] {\n  -webkit-box-flex: 1;\n      -ms-flex: 1;\n          flex: 1;\n  display: -webkit-box;\n  display: -ms-flexbox;\n  display: flex;\n  -webkit-box-pack: center;\n      -ms-flex-pack: center;\n          justify-content: center;\n  -webkit-box-align: center;\n      -ms-flex-align: center;\n          align-items: center;\n  font-size: 10vw;\n  font-weight: bolder;\n}\n.page[data-v-516ac168] {\n  color: slategray;\n  -webkit-box-sizing: border-box;\n          box-sizing: border-box;\n  background: #fff;\n  padding: 10px;\n}\n.info[data-v-516ac168] {\n  -webkit-box-flex: 0;\n      -ms-flex: 0 0 250px;\n          flex: 0 0 250px;\n  margin-right: 10px;\n}\n.select-wrapper[data-v-516ac168] {\n  -webkit-box-flex: 1;\n      -ms-flex: 1;\n          flex: 1;\n}\n.total-wrapper[data-v-516ac168] {\n  -webkit-box-flex: 0;\n      -ms-flex: 0 0 140px;\n          flex: 0 0 140px;\n  display: -webkit-box;\n  display: -ms-flexbox;\n  display: flex;\n  -webkit-box-orient: vertical;\n  -webkit-box-direction: normal;\n      -ms-flex-direction: column;\n          flex-direction: column;\n  -webkit-box-pack: justify;\n      -ms-flex-pack: justify;\n          justify-content: space-between;\n  padding-left: 10px;\n  padding-top: 5px;\n  padding-bottom: 5px;\n}\n.total-account[data-v-516ac168] {\n  color: #606266;\n  font-size: 17px;\n  -webkit-box-flex: 0;\n      -ms-flex: 0 0 100px;\n          flex: 0 0 100px;\n  border: 2px dashed #606266;\n  border-radius: 15px;\n  display: -webkit-box;\n  display: -ms-flexbox;\n  display: flex;\n  -webkit-box-orient: vertical;\n  -webkit-box-direction: normal;\n      -ms-flex-direction: column;\n          flex-direction: column;\n  -webkit-box-pack: center;\n      -ms-flex-pack: center;\n          justify-content: center;\n  -webkit-box-align: center;\n      -ms-flex-align: center;\n          align-items: center;\n}\n.total-account-line[data-v-516ac168] {\n  line-height: 30px;\n}\n.submit-btn[data-v-516ac168] {\n  color: white;\n  font-weight: bolder;\n  -webkit-box-flex: 0;\n      -ms-flex: 0 0 50px;\n          flex: 0 0 50px;\n  background: #606266;\n  display: -webkit-box;\n  display: -ms-flexbox;\n  display: flex;\n  -webkit-box-align: center;\n      -ms-flex-align: center;\n          align-items: center;\n  -webkit-box-pack: center;\n      -ms-flex-pack: center;\n          justify-content: center;\n  border-radius: 30px;\n}\n.submit-btn[data-v-516ac168]:active {\n  color: #606266;\n  background: white;\n}\n.border[data-v-516ac168] {\n  border: 1px solid #ebebeb;\n  -webkit-box-shadow: 0 0 8px 0 rgba(232, 237, 250, 0.6), 0 2px 4px 0 rgba(232, 237, 250, 0.5);\n          box-shadow: 0 0 8px 0 rgba(232, 237, 250, 0.6), 0 2px 4px 0 rgba(232, 237, 250, 0.5);\n  border-radius: 8px;\n}\n.title[data-v-516ac168] {\n  height: 35px;\n  display: -webkit-box;\n  display: -ms-flexbox;\n  display: flex;\n  -webkit-box-pack: center;\n      -ms-flex-pack: center;\n          justify-content: center;\n  -webkit-box-align: center;\n      -ms-flex-align: center;\n          align-items: center;\n  font-weight: bolder;\n  border-bottom: 1px solid #ebebeb;\n}\n.info-line[data-v-516ac168] {\n  font-size: 17px;\n  line-height: 30px;\n  display: -webkit-box;\n  display: -ms-flexbox;\n  display: flex;\n  -webkit-box-pack: justify;\n      -ms-flex-pack: justify;\n          justify-content: space-between;\n}\n.info-title[data-v-516ac168] {\n}\n.info-value[data-v-516ac168] {\n}\n.total[data-v-516ac168] {\n  border-top: 1px dashed slategray;\n}\n.project[data-v-516ac168] {\n  border-bottom: 1px dashed slategray;\n}\n.content[data-v-516ac168] {\n  padding: 5px;\n}\n.option-item[data-v-516ac168] {\n  color: white;\n  font-size: 18px;\n  display: -webkit-box;\n  display: -ms-flexbox;\n  display: flex;\n  -webkit-box-pack: center;\n      -ms-flex-pack: center;\n          justify-content: center;\n  -webkit-box-align: center;\n      -ms-flex-align: center;\n          align-items: center;\n  padding: 0 20px;\n  height: 50px;\n  border: 2px solid slategray;\n  border-radius: 8px;\n  margin: 25px;\n  background: slategray;\n}\n.option-item[data-v-516ac168]:active {\n  background: white;\n  color: slategray;\n}\n.percentage[data-v-516ac168] {\n  -webkit-box-flex: 0;\n      -ms-flex: 0 0 100px;\n          flex: 0 0 100px;\n}\n.fee[data-v-516ac168] {\n  -webkit-box-flex: 0;\n      -ms-flex: 0 0 100px;\n          flex: 0 0 100px;\n}\n.des[data-v-516ac168] {\n  -webkit-box-flex: 1;\n      -ms-flex: 1;\n          flex: 1;\n}\n", ""]);
 
 // exports
 
@@ -3429,7 +3495,7 @@ exports = module.exports = __webpack_require__(36)(false);
 
 
 // module
-exports.push([module.i, "\ndiv[data-v-377f7860] {\n  -webkit-box-sizing: border-box;\n          box-sizing: border-box;\n}\n.info[data-v-377f7860] {\n  -webkit-box-flex: 1;\n      -ms-flex: 1;\n          flex: 1;\n}\n.wrapper[data-v-377f7860] {\n  background-color: slategray;\n  position: fixed;\n  top: 0;\n  bottom: 0;\n  right: 0;\n  width: 400px;\n  /* border: 1px solid #ebebeb; */\n  -webkit-box-shadow: 0 0 8px 0 rgba(112, 128, 144, 0.6), 0 2px 4px 0 rgba(112, 128, 144, 0.5);\n          box-shadow: 0 0 8px 0 rgba(112, 128, 144, 0.6), 0 2px 4px 0 rgba(112, 128, 144, 0.5);\n}\n.close[data-v-377f7860] {\n  position: absolute;\n  top: 0;\n  left: 0;\n  padding-left: 10px;\n  width: 50px;\n  height: 50px;\n  font-size: 30px;\n  color: white;\n}\n.input-number[data-v-377f7860] {\n  background-color: #fff;\n  color: slategray;\n  font-size: 18px;\n  font-weight: bolder;\n  display: -webkit-box;\n  display: -ms-flexbox;\n  display: flex;\n  -webkit-box-orient: vertical;\n  -webkit-box-direction: normal;\n      -ms-flex-direction: column;\n          flex-direction: column;\n  position: absolute;\n  bottom: 0;\n  right: 0;\n  height: 400px;\n  width: 400px;\n}\n.group1[data-v-377f7860] {\n  -webkit-box-flex: 1;\n      -ms-flex: 1;\n          flex: 1;\n  display: -webkit-box;\n  display: -ms-flexbox;\n  display: flex;\n  /* border-top: 1px solid slategray; */\n}\n.number-group[data-v-377f7860] {\n  display: -webkit-box;\n  display: -ms-flexbox;\n  display: flex;\n  -webkit-box-orient: vertical;\n  -webkit-box-direction: normal;\n      -ms-flex-direction: column;\n          flex-direction: column;\n  -webkit-box-flex: 3;\n      -ms-flex: 3;\n          flex: 3;\n}\n.btn[data-v-377f7860] {\n  font-size: 18px;\n  -webkit-box-flex: 1;\n      -ms-flex: 1;\n          flex: 1;\n  display: -webkit-box;\n  display: -ms-flexbox;\n  display: flex;\n  -webkit-box-pack: center;\n      -ms-flex-pack: center;\n          justify-content: center;\n  -webkit-box-align: center;\n      -ms-flex-align: center;\n          align-items: center;\n  border-left: 2px solid slategray;\n  border-top: 2px solid slategray;\n}\n.number-line[data-v-377f7860] {\n  display: -webkit-box;\n  display: -ms-flexbox;\n  display: flex;\n  -webkit-box-flex: 1;\n      -ms-flex: 1;\n          flex: 1;\n  border-top: 2px solid slategray;\n}\n.number[data-v-377f7860] {\n  display: -webkit-box;\n  display: -ms-flexbox;\n  display: flex;\n  -webkit-box-pack: center;\n      -ms-flex-pack: center;\n          justify-content: center;\n  -webkit-box-align: center;\n      -ms-flex-align: center;\n          align-items: center;\n  -ms-flex-item-align: stretch;\n      align-self: stretch;\n  -webkit-box-flex: 1;\n      -ms-flex: 1;\n          flex: 1;\n}\n.number[data-v-377f7860]:first-child {\n  border-right: 2px solid slategray;\n}\n.number[data-v-377f7860]:active,\n.number-0[data-v-377f7860]:active,\n.btn[data-v-377f7860]:active {\n  background: slategray;\n  color: #fff;\n}\n.number-double[data-v-377f7860] {\n  -webkit-box-pack: center;\n      -ms-flex-pack: center;\n          justify-content: center;\n  -webkit-box-align: center;\n      -ms-flex-align: center;\n          align-items: center;\n  display: -webkit-box;\n  display: -ms-flexbox;\n  display: flex;\n  -webkit-box-flex: 2;\n      -ms-flex: 2;\n          flex: 2;\n  border-right: 2px solid slategray;\n}\n", ""]);
+exports.push([module.i, "\ndiv[data-v-377f7860] {\n  -webkit-box-sizing: border-box;\n          box-sizing: border-box;\n}\n.info[data-v-377f7860] {\n  -webkit-box-flex: 1;\n      -ms-flex: 1;\n          flex: 1;\n}\n.wrapper[data-v-377f7860] {\n  background-color: slategray;\n  position: fixed;\n  top: 0;\n  bottom: 0;\n  right: 0;\n  width: 400px;\n  /* border: 1px solid #ebebeb; */\n  -webkit-box-shadow: 0 0 8px 0 rgba(112, 128, 144, 0.6), 0 2px 4px 0 rgba(112, 128, 144, 0.5);\n          box-shadow: 0 0 8px 0 rgba(112, 128, 144, 0.6), 0 2px 4px 0 rgba(112, 128, 144, 0.5);\n}\n.close[data-v-377f7860] {\n  position: absolute;\n  top: 0;\n  left: 0;\n  padding-left: 10px;\n  width: 50px;\n  height: 50px;\n  font-size: 30px;\n  color: white;\n  cursor: pointer;\n}\n.number-show[data-v-377f7860] {\n  color: #fff;\n  font-size: 30px;\n  font-weight: bolder;\n  display: -webkit-box;\n  display: -ms-flexbox;\n  display: flex;\n  -webkit-box-pack: end;\n      -ms-flex-pack: end;\n          justify-content: flex-end;\n  -webkit-box-align: center;\n      -ms-flex-align: center;\n          align-items: center;\n  position: absolute;\n  left: 0;\n  right: 10px;\n  bottom: 400px;\n}\n.input-number[data-v-377f7860] {\n  background-color: #fff;\n  color: slategray;\n  font-size: 18px;\n  font-weight: bolder;\n  display: -webkit-box;\n  display: -ms-flexbox;\n  display: flex;\n  -webkit-box-orient: vertical;\n  -webkit-box-direction: normal;\n      -ms-flex-direction: column;\n          flex-direction: column;\n  position: absolute;\n  bottom: 0;\n  right: 0;\n  height: 400px;\n  width: 400px;\n}\n.group1[data-v-377f7860] {\n  -webkit-box-flex: 1;\n      -ms-flex: 1;\n          flex: 1;\n  display: -webkit-box;\n  display: -ms-flexbox;\n  display: flex;\n  /* border-top: 1px solid slategray; */\n}\n.number-group[data-v-377f7860] {\n  display: -webkit-box;\n  display: -ms-flexbox;\n  display: flex;\n  -webkit-box-orient: vertical;\n  -webkit-box-direction: normal;\n      -ms-flex-direction: column;\n          flex-direction: column;\n  -webkit-box-flex: 3;\n      -ms-flex: 3;\n          flex: 3;\n}\n.btn[data-v-377f7860] {\n  font-size: 18px;\n  -webkit-box-flex: 1;\n      -ms-flex: 1;\n          flex: 1;\n  display: -webkit-box;\n  display: -ms-flexbox;\n  display: flex;\n  -webkit-box-pack: center;\n      -ms-flex-pack: center;\n          justify-content: center;\n  -webkit-box-align: center;\n      -ms-flex-align: center;\n          align-items: center;\n  border-left: 2px solid slategray;\n  border-top: 2px solid slategray;\n}\n.number-line[data-v-377f7860] {\n  display: -webkit-box;\n  display: -ms-flexbox;\n  display: flex;\n  -webkit-box-flex: 1;\n      -ms-flex: 1;\n          flex: 1;\n  border-top: 2px solid slategray;\n}\n.number[data-v-377f7860] {\n  display: -webkit-box;\n  display: -ms-flexbox;\n  display: flex;\n  -webkit-box-pack: center;\n      -ms-flex-pack: center;\n          justify-content: center;\n  -webkit-box-align: center;\n      -ms-flex-align: center;\n          align-items: center;\n  -ms-flex-item-align: stretch;\n      align-self: stretch;\n  -webkit-box-flex: 1;\n      -ms-flex: 1;\n          flex: 1;\n}\n.number[data-v-377f7860]:first-child {\n  border-right: 2px solid slategray;\n}\n.number[data-v-377f7860]:active,\n.number-0[data-v-377f7860]:active,\n.btn[data-v-377f7860]:active {\n  background: slategray;\n  color: #fff;\n}\n.number-double[data-v-377f7860] {\n  -webkit-box-pack: center;\n      -ms-flex-pack: center;\n          justify-content: center;\n  -webkit-box-align: center;\n      -ms-flex-align: center;\n          align-items: center;\n  display: -webkit-box;\n  display: -ms-flexbox;\n  display: flex;\n  -webkit-box-flex: 2;\n      -ms-flex: 2;\n          flex: 2;\n  border-right: 2px solid slategray;\n}\n", ""]);
 
 // exports
 
@@ -3444,7 +3510,10 @@ var render = function() {
   var _h = _vm.$createElement
   var _c = _vm._self._c || _h
   return _c("div", { staticClass: "wrapper" }, [
-    _c("div", { staticClass: "close" }, [_vm._v("x")]),
+    _c("div", { staticClass: "close", on: { click: _vm.close } }, [
+      _vm._v("x")
+    ]),
+    _c("div", { staticClass: "number-show" }, [_vm._v(_vm._s(_vm.number))]),
     _c("div", { staticClass: "input-number" }, [
       _c("div", { staticClass: "group1" }, [
         _c("div", { staticClass: "number-group" }, [
@@ -3452,24 +3521,79 @@ var render = function() {
             _c(
               "div",
               { staticClass: "number-double" },
-              _vm._l([9, 8], function(i) {
-                return _c("div", { staticClass: "number" }, [_vm._v(_vm._s(i))])
+              _vm._l([7, 8], function(i) {
+                return _c(
+                  "div",
+                  {
+                    staticClass: "number",
+                    on: {
+                      click: function($event) {
+                        _vm.inputNumber(i)
+                      }
+                    }
+                  },
+                  [_vm._v(_vm._s(i))]
+                )
               })
             ),
-            _c("div", { staticClass: "number" }, [_vm._v("7")])
+            _c(
+              "div",
+              {
+                staticClass: "number",
+                on: {
+                  click: function($event) {
+                    _vm.inputNumber(9)
+                  }
+                }
+              },
+              [_vm._v("9")]
+            )
           ]),
           _c("div", { staticClass: "number-line" }, [
             _c(
               "div",
               { staticClass: "number-double" },
-              _vm._l([6, 5], function(i) {
-                return _c("div", { staticClass: "number" }, [_vm._v(_vm._s(i))])
+              _vm._l([4, 5], function(i) {
+                return _c(
+                  "div",
+                  {
+                    staticClass: "number",
+                    on: {
+                      click: function($event) {
+                        _vm.inputNumber(i)
+                      }
+                    }
+                  },
+                  [_vm._v(_vm._s(i))]
+                )
               })
             ),
-            _c("div", { staticClass: "number" }, [_vm._v("4")])
+            _c(
+              "div",
+              {
+                staticClass: "number",
+                on: {
+                  click: function($event) {
+                    _vm.inputNumber(6)
+                  }
+                }
+              },
+              [_vm._v("6")]
+            )
           ])
         ]),
-        _c("div", { staticClass: "btn" }, [_vm._v("cancel")])
+        _c(
+          "div",
+          {
+            staticClass: "btn",
+            on: {
+              click: function($event) {
+                _vm.number = "0"
+              }
+            }
+          },
+          [_vm._v("clear")]
+        )
       ]),
       _c("div", { staticClass: "group1" }, [
         _c("div", { staticClass: "number-group" }, [
@@ -3477,13 +3601,60 @@ var render = function() {
             _c(
               "div",
               { staticClass: "number-double" },
-              _vm._l([3, 2], function(i) {
-                return _c("div", { staticClass: "number" }, [_vm._v(_vm._s(i))])
+              _vm._l([1, 2], function(i) {
+                return _c(
+                  "div",
+                  {
+                    staticClass: "number",
+                    on: {
+                      click: function($event) {
+                        _vm.inputNumber(i)
+                      }
+                    }
+                  },
+                  [_vm._v(_vm._s(i))]
+                )
               })
             ),
-            _c("div", { staticClass: "number" }, [_vm._v("1")])
+            _c(
+              "div",
+              {
+                staticClass: "number",
+                on: {
+                  click: function($event) {
+                    _vm.inputNumber(3)
+                  }
+                }
+              },
+              [_vm._v("3")]
+            )
           ]),
-          _vm._m(0)
+          _c("div", { staticClass: "number-line" }, [
+            _c(
+              "div",
+              {
+                staticClass: "number-double number-0",
+                on: {
+                  click: function($event) {
+                    _vm.inputNumber(0)
+                  }
+                }
+              },
+              [_vm._v("0")]
+            ),
+            _c(
+              "div",
+              {
+                staticClass: "number",
+                on: {
+                  click: function($event) {
+                    _vm.inputNumber(".")
+                  }
+                }
+              },
+              [_vm._v(".")]
+            )
+          ])
         ]),
         _c("div", { staticClass: "btn", on: { click: _vm.confirm } }, [
           _vm._v("confirm")
@@ -3492,17 +3663,7 @@ var render = function() {
     ])
   ])
 }
-var staticRenderFns = [
-  function() {
-    var _vm = this
-    var _h = _vm.$createElement
-    var _c = _vm._self._c || _h
-    return _c("div", { staticClass: "number-line" }, [
-      _c("div", { staticClass: "number-double number-0" }, [_vm._v("0")]),
-      _c("div", { staticClass: "number" }, [_vm._v(".")])
-    ])
-  }
-]
+var staticRenderFns = []
 render._withStripped = true
 var esExports = { render: render, staticRenderFns: staticRenderFns }
 /* harmony default export */ __webpack_exports__["a"] = (esExports);
@@ -3531,10 +3692,19 @@ var render = function() {
             _c(
               "div",
               { staticClass: "feeInfos" },
-              [
-                _vm._m(0),
-                _vm._l(_vm.orderInfo, function(i) {
-                  return _c("div", { staticClass: "project-info-item" }, [
+              _vm._l(_vm.orderInfo, function(i, index) {
+                return _c(
+                  "div",
+                  {
+                    staticClass: "project-info-item",
+                    class: { focus: _vm.isfocus(index) },
+                    on: {
+                      click: function($event) {
+                        _vm.projectIndex = index
+                      }
+                    }
+                  },
+                  [
                     _c("div", { staticClass: "project-info-item-title" }, [
                       _vm._v(
                         _vm._s(
@@ -3547,17 +3717,23 @@ var render = function() {
                       _c("span", [_vm._v("technician")]),
                       _c("span", [_vm._v(_vm._s(i.technicianName))])
                     ]),
-                    _vm._m(1, true),
+                    _c("div", { staticClass: "project-info-item-line" }, [
+                      _c("span", [_vm._v("tip")]),
+                      _c("span", [
+                        _vm._v(
+                          "$" + _vm._s((i.projectItem.tip || 0).toFixed(2))
+                        )
+                      ])
+                    ]),
                     _c("div", { staticClass: "project-info-item-line" }, [
                       _c("span", [_vm._v("total")]),
                       _c("span", [
                         _vm._v("$" + _vm._s(_vm.getAmount(i.projectItem)))
                       ])
                     ])
-                  ])
-                })
-              ],
-              2
+                  ]
+                )
+              })
             ),
             _c("div", { staticClass: "detail" }, [
               _c("div", { staticClass: "info border" }, [
@@ -3590,11 +3766,11 @@ var render = function() {
                       ])
                     }),
                     _c("div", { staticClass: "info-line" }, [
-                      _c("div", { staticClass: "info-title" }, [
-                        _vm._v("小费")
-                      ]),
+                      _c("div", { staticClass: "info-title" }, [_vm._v("tip")]),
                       _c("div", { staticClass: "info-value" }, [
-                        _vm._v("$" + _vm._s(_vm.fee.toFixed(2)))
+                        _vm._v(
+                          "$" + _vm._s((_vm.projectInfo.tip || 0).toFixed(2))
+                        )
                       ])
                     ]),
                     _c("div", { staticClass: "info-line" }, [
@@ -3616,7 +3792,9 @@ var render = function() {
                       _c("div", { staticClass: "info-value" }, [
                         _vm._v(
                           "$" +
-                            _vm._s((_vm.projectAccount + _vm.fee).toFixed(2))
+                            _vm._s(
+                              (_vm.projectAccount + _vm.projectFee).toFixed(2)
+                            )
                         )
                       ])
                     ])
@@ -3663,17 +3841,58 @@ var render = function() {
                         ]
                       )
                     }),
-                    _c("div", { staticClass: "option-item" }, [
-                      _vm._v("Other Amount")
-                    ])
+                    _c(
+                      "div",
+                      {
+                        staticClass: "option-item",
+                        on: {
+                          click: function($event) {
+                            _vm.numberPadShow = true
+                          }
+                        }
+                      },
+                      [_vm._v("Other Amount")]
+                    )
                   ],
                   2
+                )
+              ]),
+              _c("div", { staticClass: "total-wrapper" }, [
+                _c("div", { staticClass: "total-account" }, [
+                  _c("div", { staticClass: "total-account-line" }, [
+                    _vm._v("total account")
+                  ]),
+                  _c("div", { staticClass: "total-account-line" }, [
+                    _vm._v("$" + _vm._s(_vm.totalAccount))
+                  ])
+                ]),
+                _c(
+                  "div",
+                  { staticClass: "submit-btn", on: { click: _vm.confirm } },
+                  [_vm._v("submit")]
                 )
               ])
             ])
           ]
         : _vm._e(),
-      false ? _c("NumberPad") : _vm._e(),
+      _c(
+        "transition",
+        { attrs: { name: "slide-left" } },
+        [
+          _vm.numberPadShow
+            ? _c("NumberPad", {
+                attrs: { show: _vm.numberPadShow },
+                on: {
+                  "update:show": function($event) {
+                    _vm.numberPadShow = $event
+                  },
+                  numberChange: _vm.numberChange
+                }
+              })
+            : _vm._e()
+        ],
+        1
+      ),
       _vm.orderInfo.length == 0
         ? [
             _c("div", { staticClass: "content-page" }, [
@@ -3688,39 +3907,7 @@ var render = function() {
     2
   )
 }
-var staticRenderFns = [
-  function() {
-    var _vm = this
-    var _h = _vm.$createElement
-    var _c = _vm._self._c || _h
-    return _c("div", { staticClass: "project-info-item focus" }, [
-      _c("div", { staticClass: "project-info-item-title" }, [
-        _vm._v("Pedicure")
-      ]),
-      _c("div", { staticClass: "project-info-item-line" }, [
-        _c("span", [_vm._v("technician")]),
-        _c("span", [_vm._v("Tammy")])
-      ]),
-      _c("div", { staticClass: "project-info-item-line" }, [
-        _c("span", [_vm._v("fee")]),
-        _c("span", [_vm._v("$12.3")])
-      ]),
-      _c("div", { staticClass: "project-info-item-line" }, [
-        _c("span", [_vm._v("total")]),
-        _c("span", [_vm._v("$43.3")])
-      ])
-    ])
-  },
-  function() {
-    var _vm = this
-    var _h = _vm.$createElement
-    var _c = _vm._self._c || _h
-    return _c("div", { staticClass: "project-info-item-line" }, [
-      _c("span", [_vm._v("fee")]),
-      _c("span", [_vm._v("$0")])
-    ])
-  }
-]
+var staticRenderFns = []
 render._withStripped = true
 var esExports = { render: render, staticRenderFns: staticRenderFns }
 /* harmony default export */ __webpack_exports__["a"] = (esExports);

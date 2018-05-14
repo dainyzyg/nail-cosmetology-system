@@ -2,28 +2,28 @@
 .page.col
   template(v-if="projectInfo")
     .feeInfos
-      .project-info-item.focus
-        .project-info-item-title Pedicure
-        .project-info-item-line
-          span technician
-          span Tammy
-        .project-info-item-line
-          span fee
-          span $12.3
-        .project-info-item-line
-          span total
-          span $43.3
-      .project-info-item(v-for="i in orderInfo")
+      .project-info-item(v-for="i,index in orderInfo" :class="{focus:isfocus(index)}" @click="projectIndex=index")
         .project-info-item-title {{i.projectItem.project.englishName||i.projectItem.project.name}}
         .project-info-item-line
           span technician
           span {{i.technicianName}}
         .project-info-item-line
-          span fee
-          span $0
+          span tip
+          span ${{(i.projectItem.tip||0).toFixed(2)}}
         .project-info-item-line
           span total
           span ${{getAmount(i.projectItem)}}
+      //- .project-info-item(v-for="i in 5"  @click="projectIndex=index")
+      //-   .project-info-item-title englishName
+      //-   .project-info-item-line
+      //-     span technician
+      //-     span technicianName
+      //-   .project-info-item-line
+      //-     span tip
+      //-     span $3123
+      //-   .project-info-item-line
+      //-     span total
+      //-     span $21324
     .detail
       .info.border
         .title Project Info
@@ -35,14 +35,14 @@
             .info-title {{i.englishName||i.name}}
             .info-value ${{i.price}}
           .info-line
-            .info-title 小费
-            .info-value ${{fee.toFixed(2)}}
+            .info-title tip
+            .info-value ${{(projectInfo.tip||0).toFixed(2)}}
           .info-line
             .info-title technician
             .info-value {{orderInfo[this.projectIndex].technicianName}}
           .info-line.total
             .info-title total
-            .info-value ${{(projectAccount+fee).toFixed(2)}}
+            .info-value ${{(projectAccount+projectFee).toFixed(2)}}
       .select-wrapper.border
         .title Choose Tips
         .content
@@ -50,8 +50,14 @@
             .percentage {{i.percentage}}%
             .fee $ {{(projectAccount*i.percentage/100).toFixed(2)}}
             .des {{i.description}}
-          .option-item Other Amount
-  NumberPad(v-if="false")
+          .option-item(@click="numberPadShow=true") Other Amount
+      .total-wrapper
+        .total-account
+          .total-account-line total account
+          .total-account-line ${{totalAccount}}
+        .submit-btn(@click="confirm") submit
+  transition(name="slide-left")
+    NumberPad(v-if="numberPadShow" :show.sync="numberPadShow" @numberChange="numberChange")
   template(v-if="orderInfo.length==0")
     .content-page Customer Screen
   template(v-if="orderInfo.length==100")
@@ -70,7 +76,8 @@ export default {
       feeInfo: [],
       orderInfo: [],
       projectIndex: 0,
-      fee: 0
+      fee: 0,
+      numberPadShow: false
     }
   },
   async created() {
@@ -78,16 +85,32 @@ export default {
     window.ipcRenderer.on('receive-order-info', this.receiveOrderInfo)
   },
   methods: {
+    numberChange(number) {
+      this.$set(this.projectInfo, 'tip', number)
+    },
+    isfocus(index) {
+      return index == this.projectIndex
+    },
     getAmount(projectItem) {
       let price = projectItem.project.price || 0
       projectItem.additions.forEach(a => {
         let p = a.price || 0
         price += p
       })
+      price += projectItem.tip || 0
       return price.toFixed(2)
     },
     select(percentage) {
-      this.fee = this.projectAccount * percentage / 100
+      // this.fee = this.projectAccount * percentage / 100
+      this.$set(this.projectInfo, 'tip', this.projectAccount * percentage / 100)
+      // this.next()
+    },
+    next() {
+      if (this.projectIndex == this.orderInfo.length - 1) {
+        // this.projectIndex = 0
+      } else {
+        this.projectIndex += 1
+      }
     },
     getFeeInfo() {
       const feeInfo = []
@@ -111,15 +134,31 @@ export default {
       console.log(this.feeInfo)
     },
     confirm() {
+      console.log(this.orderInfo)
       window.ipcRenderer.send('send-fee', 998)
     },
     receiveOrderInfo(event, arg) {
       console.log('receiveOrderInfo')
       this.orderInfo = arg.preAssignItems
+      this.projectIndex = 0
       console.log(arg.preAssignItems)
     }
   },
   computed: {
+    totalAccount() {
+      let total = 0
+      this.orderInfo.forEach(item => {
+        const projectItem = item.projectItem
+        let price = projectItem.project.price || 0
+        projectItem.additions.forEach(a => {
+          let p = a.price || 0
+          price += p
+        })
+        price += projectItem.tip || 0
+        total += price
+      })
+      return total.toFixed(2)
+    },
     projectAccount() {
       let price = this.projectInfo.project.price || 0
       this.projectInfo.additions.forEach(a => {
@@ -127,6 +166,9 @@ export default {
         price += p
       })
       return price
+    },
+    projectFee() {
+      return this.projectInfo.tip || 0
     },
     projectInfo() {
       if (this.orderInfo[this.projectIndex] && this.orderInfo[this.projectIndex].projectItem) {
@@ -139,6 +181,20 @@ export default {
 </script>
 
 <style scoped>
+.slide-left-enter-active,
+.slide-left-leave-active,
+.slide-right-enter-active,
+.slide-right-leave-active {
+  transition: all 0.2s ease-in-out;
+}
+.slide-left-enter,
+.slide-left-leave-to {
+  transform: translate3d(100%, 0, 0);
+}
+.slide-right-enter,
+.slide-right-leave-to {
+  transform: translate3d(-100%, 0, 0);
+}
 .project-info-item-title {
   display: flex;
   justify-content: center;
@@ -149,7 +205,7 @@ export default {
   justify-content: space-between;
 }
 .project-info-item.focus {
-  border: 1px solid slategray;
+  border: 2px solid slategray;
 }
 .project-info-item {
   padding: 2px 5px;
@@ -161,6 +217,7 @@ export default {
   margin-right: 10px;
   margin-bottom: 10px;
 }
+
 .feeInfos {
   display: flex;
   flex-wrap: wrap;
@@ -190,6 +247,43 @@ export default {
 }
 .select-wrapper {
   flex: 1;
+}
+.total-wrapper {
+  flex: 0 0 140px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding-left: 10px;
+  padding-top: 5px;
+  padding-bottom: 5px;
+}
+.total-account {
+  color: #606266;
+  font-size: 17px;
+  flex: 0 0 100px;
+  border: 2px dashed #606266;
+  border-radius: 15px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+.total-account-line {
+  line-height: 30px;
+}
+.submit-btn {
+  color: white;
+  font-weight: bolder;
+  flex: 0 0 50px;
+  background: #606266;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 30px;
+}
+.submit-btn:active {
+  color: #606266;
+  background: white;
 }
 .border {
   border: 1px solid #ebebeb;

@@ -12,7 +12,7 @@
           i.el-icon-edit-outline
           span(slot='title') 项目管理
         el-menu-item(index='/technician')
-          i.el-icon-setting
+          i.el-icon-edit-outline
           span(slot='title') 技师管理
         el-menu-item(index='/attendance')
           i.el-icon-date
@@ -25,7 +25,10 @@
           span(slot='title') 小费设置
         el-menu-item(index='/setting')
           i.el-icon-setting
-          span(slot='title') 设置
+          span(slot='title') 参数设置
+        el-menu-item(index='/server')
+          i.el-icon-upload
+          span(slot='title') 服务器
     router-view
 </template>
 

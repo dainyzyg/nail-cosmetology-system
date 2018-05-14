@@ -10,6 +10,7 @@ import Attendance from '@/views/Attendance'
 import Setting from '@/views/Setting'
 import Screen from '@/views/Screen'
 import Fee from '@/views/Fee'
+import Server from '@/views/Server'
 
 Vue.use(Router)
 
@@ -24,6 +25,7 @@ export default new Router({
     { path: '/attendance', component: Attendance },
     { path: '/setting', component: Setting },
     { path: '/screen', component: Screen },
-    { path: '/fee', component: Fee }
+    { path: '/fee', component: Fee },
+    { path: '/server', component: Server }
   ]
 })

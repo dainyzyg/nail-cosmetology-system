@@ -8,10 +8,13 @@
         el-table-column(prop="name" label="姓名" :formatter="nameFormatter")
         el-table-column(prop="phone" label="电话")
         el-table-column(prop="orderInfo" :formatter="orderInfoFormatter" label="项目")
-        el-table-column(prop="orderDate" :formatter="timeFormatter" label="订单时间" align="center" header-align="center" width="120")
-        el-table-column(prop="isPreorder" label="预约" align="center" header-align="center" width="120")
+        el-table-column(prop="orderDate" :formatter="timeFormatter" label="订单时间" align="center" header-align="center" width="80")
+        el-table-column(prop="isPreorder" label="预约/到店" align="center" header-align="center" width="120")
           template(slot-scope='scope')
-            span {{scope.row.isPreorder?scope.row.preorderTime.toLocaleTimeString('en-GB'):'无'}}
+            span {{scope.row.isPreorder?scope.row.preorderTime.toLocaleTimeString('en-GB')+' / 是':'无'}}
+        //- el-table-column(label="状态" align="center" header-align="center" width="90")
+        //-   template(slot-scope='scope')
+        //-     span {{getOrderState(scope.row)}}
         el-table-column(align="center" label="操作" width="220")
           template(slot-scope='scope')
             el-button(@click='account(scope.row)' size='small' type="success") 结算
@@ -47,6 +50,8 @@
           el-form-item(label='预约' v-if="selectFormData.tabID==='1'")
             el-switch(v-model="selectFormData.isPreorder")
             el-date-picker(type="datetime" :default-value="workBegin" v-if="selectFormData.isPreorder" style="margin-left:10px;" v-model="selectFormData.preorderTime" placeholder="预约时间")
+            span.arrive-title(v-if="selectFormData.isPreorder") 是否到店
+            el-switch(v-if="selectFormData.isPreorder" v-model="selectFormData.isArrive")
         .project-wrapper.flex
           PanelSelect(title="种类" :data="kindList" :selectedItem.sync="selectedKind" flex="0 0 100px")
           PanelSelect(title="项目" :data="projectList" :selectedItem.sync="selectedProject" flex="0 0 150px")
@@ -321,18 +326,19 @@ export default {
       })
     },
     async getData() {
-      this.tableData = []
+      const dataList = []
       await this.$IDB.executeTransaction(['order'], 'readonly', t => {
         const store = t.objectStore('order')
         const request = store.index('orderDate').openCursor(IDBKeyRange.bound(this.dateBegin, this.dateEnd))
         request.onsuccess = event => {
           const cursor = event.target.result
           if (cursor) {
-            this.tableData.push(cursor.value)
+            dataList.push(cursor.value)
             cursor.continue()
           }
         }
       })
+      this.tableData = dataList
       if (this.projectList.length > 0) {
         this.selectProject = this.projectList[0]
       }
@@ -344,6 +350,9 @@ export default {
       const timeStr = `${time}${pnStr}`
       return parseInt(timeStr)
     }
+    // getOrderState(data) {
+    //   const preAssignItems = this.preAssignList.filter(x => x.orderID == data.id)
+    // }
   },
   watch: {
     dataTime(val) {
@@ -405,6 +414,10 @@ export default {
 }
 </script>
 <style scoped>
+.arrive-title {
+  padding-left: 10px;
+  padding-right: 10px;
+}
 .tab-title i {
   line-height: 40px;
   font-size: 30px;

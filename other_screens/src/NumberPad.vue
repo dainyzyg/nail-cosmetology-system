@@ -1,46 +1,70 @@
 <template lang="pug">
 .wrapper
-  .close x
+  .close(@click="close") x
+  .number-show {{number}}
   .input-number
     .group1
       .number-group
         .number-line
           .number-double
-            .number(v-for="i in [9,8]") {{i}}
-          .number 7
+            .number(v-for="i in [7,8]" @click="inputNumber(i)") {{i}}
+          .number(@click="inputNumber(9)") 9
         .number-line
           .number-double
-            .number(v-for="i in [6,5]") {{i}}
-          .number 4
-      .btn cancel
+            .number(v-for="i in [4,5]" @click="inputNumber(i)") {{i}}
+          .number(@click="inputNumber(6)") 6
+      .btn(@click="number='0'") clear
     .group1
       .number-group
         .number-line
           .number-double
-            .number(v-for="i in [3,2]") {{i}}
-          .number 1
+            .number(v-for="i in [1,2]" @click="inputNumber(i)") {{i}}
+          .number(@click="inputNumber(3)") 3
         .number-line
-          .number-double.number-0 0
-          .number .
+          .number-double.number-0(@click="inputNumber(0)") 0
+          .number(@click="inputNumber('.')") .
       .btn(@click="confirm") confirm
 </template>
 
 <script>
 export default {
+  props: ['show'],
   data() {
     return {
-      a: 'aaa'
+      a: 'aaa',
+      number: '0'
     }
   },
   async created() {
     window.ipcRenderer.on('receive-order-info', this.receiveOrderInfo)
   },
   methods: {
+    inputNumber(i) {
+      if (i == '.') {
+        if (this.number.search(/\./) < 0) {
+          this.number = `${this.number}${i}`
+        }
+      } else if (this.number == '0') {
+        this.number = `${i}`
+      } else {
+        this.number = `${this.number}${i}`
+      }
+    },
+    close() {
+      this.$emit('update:show', false)
+    },
     confirm() {
-      window.ipcRenderer.send('send-fee', 998)
+      this.$emit('numberChange', Number(this.number))
+      this.$emit('update:show', false)
+      // window.ipcRenderer.send('send-fee', 998)
     },
     receiveOrderInfo(event, arg) {
       console.log(arg)
+    }
+  },
+  watch: {
+    show(val) {
+      this.number = '0'
     }
   }
 }
@@ -72,6 +96,19 @@ div {
   height: 50px;
   font-size: 30px;
   color: white;
+  cursor: pointer;
+}
+.number-show {
+  color: #fff;
+  font-size: 30px;
+  font-weight: bolder;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  position: absolute;
+  left: 0;
+  right: 10px;
+  bottom: 400px;
 }
 .input-number {
   background-color: #fff;
