@@ -15,7 +15,7 @@
         //- el-table-column(label="状态" align="center" header-align="center" width="90")
         //-   template(slot-scope='scope')
         //-     span {{getOrderState(scope.row)}}
-        el-table-column(align="center" label="操作" width="220")
+        el-table-column(align="left" label="操作" width="280")
           template(slot-scope='scope')
             el-button(@click='account(scope.row)' size='small' type="success") 结算
             el-button(@click='edit(scope.row)' size='small' type="primary") 编辑
@@ -155,7 +155,24 @@ export default {
       this.addVisible = true
     },
     async remove(id) {
+      const r = await this.$confirm('此操作将永久删除该订单, 是否继续?', '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      })
+      if (r != 'confirm') return
       await this.$IDB.delete('order', id)
+      await this.$IDB.executeTransaction(['assign'], 'readwrite', t => {
+        const store = t.objectStore('assign')
+        const request = store.index('orderID').openCursor(IDBKeyRange.only(id))
+        request.onsuccess = event => {
+          const cursor = event.target.result
+          if (cursor) {
+            cursor.delete()
+            cursor.continue()
+          }
+        }
+      })
       this.getData()
       this.$algorithm.assignpProjects()
     },
@@ -329,7 +346,7 @@ export default {
       const dataList = []
       await this.$IDB.executeTransaction(['order'], 'readonly', t => {
         const store = t.objectStore('order')
-        const request = store.index('orderDate').openCursor(IDBKeyRange.bound(this.dateBegin, this.dateEnd))
+        const request = store.index('orderDate').openCursor(IDBKeyRange.bound(this.dateBegin, this.dateEnd), 'prev')
         request.onsuccess = event => {
           const cursor = event.target.result
           if (cursor) {

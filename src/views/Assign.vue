@@ -2,6 +2,12 @@
   .page.col
     .breadcrumb-wraper
       .placeholder
+        el-button(v-if="!openHistory" @click="openHistory=true" size="mini" close) detail
+        template(v-if="openHistory")
+          el-button(@click="prev" icon="el-icon-caret-left" size="mini" round)
+          |  {{historyIndex}}/{{historyLength}}
+          el-button(@click="next" icon="el-icon-caret-right" size="mini" round)
+          el-button(@click="openHistory=false" icon="el-icon-close" size="mini" round)
       el-date-picker(v-model="dataTime" type="date" placeholder="选择日期" :clearable="false" size="large")
     .table-wraper
       .mark
@@ -48,7 +54,10 @@ export default {
       preAssignList: [],
       technicianList: [],
       orderList: [],
-      setIntervalIndex: null
+      historyPreAssignList: [],
+      setIntervalIndex: null,
+      historyIndex: 1,
+      openHistory: false
     }
   },
   async created() {
@@ -67,10 +76,21 @@ export default {
     window.ipcRenderer.removeListener('asynchronous-reply', this.getData)
   },
   methods: {
+    prev() {
+      if (this.historyIndex > 1) {
+        this.historyIndex -= 1
+      }
+    },
+    next() {
+      if (this.historyIndex < this.historyLength) {
+        this.historyIndex += 1
+      }
+    },
     async getData() {
       const r = await this.$algorithm.getAssignList()
       this.technicianList = r.technicianList
       this.preAssignList = r.preAssignList
+      this.historyPreAssignList = r.historyPreAssignList
       this.dataTime = r.dateNow
     },
     async cancelAdjust() {
@@ -159,7 +179,7 @@ export default {
     getOrderInfo(pi) {
       const list = []
       const time = `${this.getTimeString(pi.timeStart)}-${this.getTimeString(pi.timeEnd)}`
-      list.push(`${pi.number} ${pi.orderName}`)
+      list.push(`${pi.number || ''} ${pi.orderName}`)
       list.push(`${time}`)
       list.push(`${pi.projectName}`)
       return list
@@ -173,7 +193,11 @@ export default {
       return `calc(59px + (100% - 63px) * ${left})`
     },
     getWorkList(id) {
-      return this.preAssignList.filter(x => x.technicianID == id)
+      let list = this.preAssignList
+      if (this.openHistory) {
+        list = this.historyItem
+      }
+      return list.filter(x => x.technicianID == id)
     },
     getPIStyle(pi) {
       const duration = pi.timeEnd - pi.timeStart
@@ -321,6 +345,12 @@ export default {
         time = parseInt(localStorage.weekendEndTime)
       }
       return new Date(this.dateBegin.getTime() + time * 60 * 60 * 1000)
+    },
+    historyItem() {
+      return this.historyPreAssignList[this.historyIndex]
+    },
+    historyLength() {
+      return Object.keys(this.historyPreAssignList).length
     }
   },
   watch: {}

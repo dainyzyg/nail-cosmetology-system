@@ -6,6 +6,9 @@
         el-option(v-for="item in orderRuleList" :key="item" :label="item" :value="item")
       el-select.margin(placeholder="预先级" size="mini" v-model="kind.priority" @change="saveKind")
         el-option(v-for="item in priorityList" :key="item" :label="item" :value="item")
+      span.margin 工作台数限制
+      el-switch.margin(v-model="kind.workingTableLimit" size="mini"  @change="saveKind")
+      el-input-number.margin(v-if="kind.workingTableLimit" size="mini" v-model="kind.workingTableLimitNumber"  @change="saveKind")
       el-button.margin(size="mini" type="primary" @click="addProject") 添加项目
     .project-wrapper
       ProjectPanel(v-for="item,index in projectList" :key="item.id" @remove="removeProject(index,item)" :project="item")

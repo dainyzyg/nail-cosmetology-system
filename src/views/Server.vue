@@ -1,5 +1,5 @@
 <template lang="pug">
-  .page.col()
+  .page.col(v-if="false")
     .header Server
     ClockTable
 </template>

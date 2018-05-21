@@ -73,6 +73,22 @@ window.algorithm = {
     })
     return technicianList.sort((a, b) => a.index - b.index)
   },
+  async initWorkingTableLimit() {
+    window.workingTableLimitObject = {}
+    await window.IDB.executeTransaction(['kind'], 'readonly', (t) => {
+      const store = t.objectStore('kind')
+      const request = store.openCursor()
+      request.onsuccess = (event) => {
+        const cursor = event.target.result
+        if (cursor) {
+          if (cursor.value.workingTableLimit) {
+            window.workingTableLimitObject[cursor.value.id] = Number(cursor.value.workingTableLimitNumber)
+          }
+          cursor.continue()
+        }
+      }
+    })
+  },
   async getOrder() {
     const orderList = []
     const dateBegin = this.getDateStart()
@@ -146,6 +162,7 @@ window.algorithm = {
   },
   async assignpProjects() {
     console.time('assignpProjects')
+    await this.initWorkingTableLimit()
     const technicianList = await this.getTechnicianList()
     const technicianListSort = []
     technicianList.forEach((i) => {
@@ -182,6 +199,7 @@ window.algorithm = {
     const assignList = {
       preAssignList: this.counts(r.preAssignList),
       technicianList,
+      historyPreAssignList: r.historyPreAssignList,
       date: this.getDateStart(),
       dateNow: this.getDateNow()
     }
@@ -240,6 +258,9 @@ window.algorithm = {
     historyPreAssignList,
     doDelayProjectList
   }) {
+    // if (Object.keys(historyPreAssignList).length == 8 && orderItem.name == 'y') {
+    //   debugger
+    // }
     const priorityTime = localStorage.priorityTime
     orderItem.orderInfo.sort((x, y) => x.kind.priority - y.kind.priority)
     const projectQueue = []
@@ -266,7 +287,7 @@ window.algorithm = {
       workListObj,
       preAssignList
     })
-    if (orderItem.name == '1128-1') {
+    if (orderItem.name == '1126-1') {
       // debugger
     }
     for (let TechnicianTimeItem of TechnicianTimeList) {
@@ -627,7 +648,7 @@ window.algorithm = {
     }
     return 999
   },
-  findExchangeProjectItem({ preAssignList, reAssignItem, changeItem }) {
+  findExchangeProjectItem({ preAssignList, reAssignItem, changeItem, newPreAssignList }) {
     const priorityTime = parseInt(localStorage.priorityTime)
     const subTime = parseInt(localStorage.subTime)
     const minorTime = parseInt(localStorage.minorTime)
@@ -685,7 +706,90 @@ window.algorithm = {
 
     // 比较changeItem和firstMatchItem（能交换的两个项目）的delayTime（主力后备时间）
     const changeItemDelayTime = this.getDelayTime({ item: changeItem, subTime, minorTime })
+    // const reAssignItemDelayTime = this.getDelayTime({ item: reAssignItem, subTime, minorTime })
     if (changeItemDelayTime < firstMatchItem.delayTime) {
+      return null
+    }
+    // if (reAssignItemDelayTime < firstMatchItem.delayTime) {
+    //   return null
+    // }
+    const item = this.clone(reAssignItem)
+    item.technicianName = changeItem.technicianName
+    item.technicianID = changeItem.technicianID
+    item.technician = changeItem.technician
+    item.projectID = firstMatchItem.projectItem.project.id
+    item.projectItem = firstMatchItem.projectItem
+    item.projectName = firstMatchItem.projectItem.project.name
+    item.duration = firstMatchItem.duration
+    return item
+  },
+  findExchangeProjectItemParty({ preAssignList, reAssignItem, changeItem, newPreAssignList }) {
+    const priorityTime = parseInt(localStorage.priorityTime)
+    const subTime = parseInt(localStorage.subTime)
+    const minorTime = parseInt(localStorage.minorTime)
+
+    const matchItemList = []
+    if (reAssignItem.orderItem.name == '1120') {
+      // debugger
+    }
+    reAssignItem.orderItem.orderInfo.forEach((item) => {
+      const hasAssign = preAssignList.find(
+        (x) =>
+          x.orderID == reAssignItem.orderItem.id &&
+          x.projectID == item.project.id &&
+          (x.isAdjust || x.timeStart < reAssignItem.timeStart)
+      )
+      if (hasAssign) {
+        return
+      }
+      let typeList = []
+      let duration = 0
+      const projectAndAddIDList = [item.project.id]
+      projectAndAddIDList.push(...item.additions.map((a) => a.id))
+      let matchResult = true
+      for (let id of projectAndAddIDList) {
+        if (!changeItem.technician.skillInfo[id] || !changeItem.technician.skillInfo[id].type) {
+          matchResult = false
+          break
+        } else {
+          duration += changeItem.technician.skillInfo[id].timeDiff || 0
+          typeList.push(changeItem.technician.skillInfo[id].type)
+        }
+      }
+      if (matchResult) {
+        let delayTime = 0
+        if (typeList.find((i) => i == 'sub')) {
+          delayTime = subTime
+        } else if (typeList.find((i) => i == 'minor')) {
+          delayTime = minorTime
+        }
+        // delayTime += projectPriorityTime
+        duration += item.standardTimeAll
+        matchItemList.push({ duration, delayTime, projectItem: item })
+      }
+    })
+    if (matchItemList.length <= 0) {
+      return null
+    }
+    matchItemList.sort((x, y) => x.projectItem.kind.priority - y.projectItem.kind.priority)
+    matchItemList.forEach((matchItem, i) => {
+      matchItem.projectPriorityTime = i * priorityTime
+    })
+    const firstMatchItem = matchItemList.sort((a, b) => {
+      const diff = a.delayTime + a.projectPriorityTime - b.delayTime - b.projectPriorityTime
+      if (diff == 0) {
+        return a.duration - b.duration
+      }
+      return diff
+    })[0]
+
+    // 比较changeItem和firstMatchItem（能交换的两个项目）的delayTime（主力后备时间）
+    const changeItemDelayTime = this.getDelayTime({ item: changeItem, subTime, minorTime })
+    // const reAssignItemDelayTime = this.getDelayTime({ item: reAssignItem, subTime, minorTime })
+    if (changeItemDelayTime < firstMatchItem.delayTime) {
+      return null
+    }
+    if (changeItem.duration <= firstMatchItem.duration) {
       return null
     }
     const item = this.clone(reAssignItem)
@@ -705,13 +809,6 @@ window.algorithm = {
     const newPreAssignList = []
     let findItem = false
     for (let p of preAssignList) {
-      // if (!p.isAdjust) {
-      //   debugger
-      //   const projectAndAddIDList = [p.projectItem.project.id]
-      //   projectAndAddIDList.push(...p.projectItem.additions.map((a) => a.id))
-      //   debugger
-      // }
-
       // 如果已排的项目有开始时间晚于当前项目并且订单时间早于当前项目
       if (
         !findItem &&
@@ -724,7 +821,8 @@ window.algorithm = {
         const result = this.findExchangeProjectItem({
           preAssignList,
           reAssignItem: p,
-          changeItem: assignItem
+          changeItem: assignItem,
+          newPreAssignList
         })
 
         if (result) {
@@ -739,13 +837,14 @@ window.algorithm = {
         // p.projectItem.project.id == assignItem.projectID &&
         p.timeStart < assignItem.timeStart &&
         p.earliestOrderTime > assignItem.earliestOrderTime &&
-        p.preorderTime > assignItem.preorderTime
+        p.preorderTime > assignItem.preorderTime // 防止第二个或者更后面的项目被无限拖后
       ) {
         // 先来先做，如果技师能做的话
         const result = this.findExchangeProjectItem({
           preAssignList,
           reAssignItem: assignItem,
-          changeItem: p
+          changeItem: p,
+          newPreAssignList
         })
 
         if (result) {
@@ -753,6 +852,41 @@ window.algorithm = {
           reAssignItem = result
           changeItem = p
           findItem = true
+        }
+      }
+      // 寻找派对订单看看能不能交换项目（项目耗时短的排在前面）
+      if (
+        !findItem &&
+        !p.isAdjust &&
+        // p.projectItem.project.id == assignItem.projectID &&
+        p.earliestOrderTime.getTime() == assignItem.earliestOrderTime.getTime()
+      ) {
+        // debugger
+        let result = null
+        if (p.timeStart > assignItem.timeStart) {
+          result = this.findExchangeProjectItemParty({
+            preAssignList,
+            reAssignItem: p,
+            changeItem: assignItem,
+            newPreAssignList
+          })
+          if (result) {
+            reAssignItem = result
+            changeItem = assignItem
+            findItem = true
+          }
+        } else if (p.timeStart < assignItem.timeStart) {
+          result = this.findExchangeProjectItemParty({
+            preAssignList,
+            reAssignItem: assignItem,
+            changeItem: p,
+            newPreAssignList
+          })
+          if (result) {
+            reAssignItem = result
+            changeItem = p
+            findItem = true
+          }
         }
       }
 
@@ -785,9 +919,11 @@ window.algorithm = {
       if (newnewPreAssignList) {
         return newnewPreAssignList
       }
-
-      newPreAssignList.push(reAssignItem)
-      return newPreAssignList
+      if (this.judgeWorkingTableLimit({ item: reAssignItem, preAssignList: newPreAssignList })) {
+        newPreAssignList.push(reAssignItem)
+        return newPreAssignList
+      }
+      return false
     }
     return false
   },
@@ -894,23 +1030,47 @@ window.algorithm = {
         if (lastTime < item.timeStart) {
           const virtualTimeStart = new Date(Math.max(lastTimeRelative, timeStart))
           if (timeStart <= lastTime) {
-            technicianTimeList.push({
-              virtualTimeStart,
-              lastTimeRelative,
-              ...projectQueueItem,
-              timeStart: new Date(lastTime),
-              last: false,
-              next: item
+            this.pushToTechnicianTimeList({
+              item: {
+                virtualTimeStart,
+                lastTimeRelative,
+                ...projectQueueItem,
+                timeStart: new Date(lastTime),
+                last: false,
+                next: item
+              },
+              technicianTimeList,
+              preAssignList
             })
+            // technicianTimeList.push({
+            //   virtualTimeStart,
+            //   lastTimeRelative,
+            //   ...projectQueueItem,
+            //   timeStart: new Date(lastTime),
+            //   last: false,
+            //   next: item
+            // })
           } else if (timeStart < item.timeStart && timeStart > lastTime) {
-            technicianTimeList.push({
-              virtualTimeStart,
-              lastTimeRelative,
-              ...projectQueueItem,
-              timeStart: new Date(timeStart),
-              last: false,
-              next: item
+            this.pushToTechnicianTimeList({
+              item: {
+                virtualTimeStart,
+                lastTimeRelative,
+                ...projectQueueItem,
+                timeStart: new Date(timeStart),
+                last: false,
+                next: item
+              },
+              technicianTimeList,
+              preAssignList
             })
+            // technicianTimeList.push({
+            //   virtualTimeStart,
+            //   lastTimeRelative,
+            //   ...projectQueueItem,
+            //   timeStart: new Date(timeStart),
+            //   last: false,
+            //   next: item
+            // })
           }
         }
         // if (item.timeEnd <= timeStart) {
@@ -921,13 +1081,24 @@ window.algorithm = {
         }
         lastTime = item.timeEnd
       })
-      technicianTimeList.push({
-        virtualTimeStart: new Date(Math.max(lastTimeRelative, timeStart)),
-        lastTimeRelative,
-        ...projectQueueItem,
-        timeStart: new Date(Math.max(...[lastTime, timeStart])),
-        last: true
+      this.pushToTechnicianTimeList({
+        item: {
+          virtualTimeStart: new Date(Math.max(lastTimeRelative, timeStart)),
+          lastTimeRelative,
+          ...projectQueueItem,
+          timeStart: new Date(Math.max(...[lastTime, timeStart])),
+          last: true
+        },
+        technicianTimeList,
+        preAssignList
       })
+      // technicianTimeList.push({
+      //   virtualTimeStart: new Date(Math.max(lastTimeRelative, timeStart)),
+      //   lastTimeRelative,
+      //   ...projectQueueItem,
+      //   timeStart: new Date(Math.max(...[lastTime, timeStart])),
+      //   last: true
+      // })
     }
 
     return technicianTimeList.sort((a, b) => {
@@ -954,6 +1125,59 @@ window.algorithm = {
       }
       return timeDif
     })
+  },
+  judgeWorkingTableLimit({ item, preAssignList }) {
+    const limitNumber = window.workingTableLimitObject[item.projectItem.kind.id] || 0
+    if (limitNumber <= 0) {
+      return true
+    } else {
+      const matchPreAssignList = preAssignList.filter(
+        (p) =>
+          p.projectItem &&
+          p.projectItem.kind.id == item.projectItem.kind.id &&
+          !(
+            p.timeStart >= new Date(item.timeStart.getTime() + item.duration * 60 * 1000) || p.timeEnd <= item.timeStart
+          )
+      )
+      if (matchPreAssignList.length < limitNumber) {
+        return true
+      } else {
+        return false
+      }
+    }
+  },
+  pushToTechnicianTimeList({ technicianTimeList, item, preAssignList }) {
+    const limitNumber = window.workingTableLimitObject[item.projectItem.kind.id]
+    if (limitNumber > 0) {
+      const matchPreAssignList = preAssignList.filter(
+        (p) =>
+          p.projectItem &&
+          p.projectItem.kind.id == item.projectItem.kind.id &&
+          !(
+            p.timeStart >= new Date(item.timeStart.getTime() + item.duration * 60 * 1000) || p.timeEnd <= item.timeStart
+          )
+      )
+      if (matchPreAssignList.length < limitNumber) {
+        technicianTimeList.push(item)
+      } else {
+        let timeStart
+        matchPreAssignList.sort((a, b) => a.timeEnd - b.timeEnd)
+        if (matchPreAssignList.length <= limitNumber) {
+          timeStart = new Date(matchPreAssignList[0].timeEnd)
+        } else {
+          timeStart = new Date(matchPreAssignList[matchPreAssignList.length - limitNumber].timeEnd)
+        }
+        // timeStart = new Date(Math.min(...matchPreAssignList.map((m) => m.timeEnd)))
+        if (!item.next || item.next.timeStart > timeStart) {
+          item.timeStart = timeStart
+          item.virtualTimeStart = timeStart
+          this.pushToTechnicianTimeList({ technicianTimeList, item, preAssignList })
+        }
+        console.log('limit')
+      }
+    } else {
+      technicianTimeList.push(item)
+    }
   },
   findTechnician({ projectItem, technicianList, projectPriorityTime }) {
     const technicianMatchList = []
