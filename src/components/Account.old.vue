@@ -6,24 +6,25 @@
       //-   el-tab-pane(label="消息中心")
       //-   el-tab-pane(label="消息中心")
       //-   el-tab-pane(label="消息中心")
-      AccountCard(v-for="i in data" ref="accountCardlist" :data="i" :tipList="tipList" :key="`${i.id}${i.project.id}`")
+      .content(v-for="i in orderList")
+        Tip(:data="i" :technician="getTechnician(i.project.id)")
     .dialog-footer(slot='footer')
-      .total 总计：{{total}}
-      .btns
-        el-button(@click="cancel") 取 消
-        el-button(type='success' @click="openScreen") 小费屏幕
-        el-button(type='primary' @click="comfirm") 结 账
+      el-button(@click="cancel") 取 消
+      el-button(type='primary' @click="comfirm") 结 账
 </template>
 
 <script>
-import AccountCard from '@/components/AccountCard'
+import Tip from '@/components/Tip'
 
 export default {
   components: {
-    AccountCard
+    Tip
   },
   props: {
     data: {
+      default: {}
+    },
+    preAssignItems: {
       default: []
     },
     visible: {
@@ -34,6 +35,7 @@ export default {
     }
   },
   created() {
+    console.log('account')
     window.ipcRenderer.on('receive-fee', this.receiveFee)
   },
   beforeDestroy() {
@@ -42,45 +44,33 @@ export default {
   },
   data() {
     return {
-      dialogVisible: false,
-      tipList: []
+      dialogVisible: false
     }
   },
   methods: {
-    openScreen() {
-      window.ipcRenderer.send('notice-fee-screen', { checkoutProjectList: this.data })
+    receiveFee(event, arg) {
+      console.log(arg)
     },
-    receiveFee(event, tipList) {
-      this.tipList = tipList
+    getTechnician(projectID) {
+      const item = this.preAssignItems.find(x => x.projectID == projectID)
+      return item.technicianName
     },
-    comfirm() {
-      console.log(this.data)
-      console.log(this.tipList)
-    },
+    comfirm() {},
     cancel() {
       this.$emit('update:visible', false)
     }
   },
   computed: {
-    total() {
-      let priceTotal = 0
-      this.data.forEach((d) => {
-        let price = d.project.price || 0
-        d.additions.forEach((a) => {
-          let p = a.price || 0
-          price += p
-        })
-        const tipItem = this.tipList.find((x) => x.projectID == d.project.id && x.id == d.id)
-        price += (tipItem && tipItem.tip) || 0
-        priceTotal += price || 0
-      })
-      return priceTotal.toFixed(2)
+    orderList() {
+      if (this.data.orderInfo) {
+        return this.data.orderInfo
+      }
+      return []
     }
   },
   watch: {
     visible(val) {
       this.dialogVisible = val
-      this.tipList = []
     },
     dialogVisible(val) {
       this.$emit('update:visible', val)
@@ -94,9 +84,14 @@ export default {
 .dialog-body {
   height: calc(96vh - 54px - 70px - 60px);
 }
-
-.dialog-footer {
+.content {
+  margin-right: 10px;
+  border: 1px solid #ebebeb;
+  padding: 10px;
+  box-shadow: 0 0 8px 0 rgba(232, 237, 250, 0.6), 0 2px 4px 0 rgba(232, 237, 250, 0.5);
+  border-radius: 3px;
   display: flex;
-  justify-content: space-between;
+  align-items: stretch;
+  width: 250px;
 }
 </style>

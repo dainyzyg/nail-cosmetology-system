@@ -1,7 +1,7 @@
 <template lang="pug">
-  .page.col(v-if="false")
+  .page.col(v-if="true")
     .header Server
-    ClockTable
+    ClockTable(:assignObject="assignObject")
 </template>
 <script>
 import ClockTable from '@/components/ClockTable'
@@ -11,10 +11,23 @@ export default {
     ClockTable
   },
   data() {
-    return {}
+    return {
+      assignObject: {
+        technicianList: [],
+        preAssignList: [],
+        historyPreAssignList: [],
+        dateNow: new Date()
+      }
+    }
   },
-  created() {},
-  methods: {}
+  created() {
+    this.getData()
+  },
+  methods: {
+    async getData() {
+      this.assignObject = await this.$algorithm.getAssignList()
+    }
+  }
 }
 </script>
 <style scoped>

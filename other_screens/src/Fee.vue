@@ -1,29 +1,19 @@
 <template lang="pug">
 .page.col
-  template(v-if="projectInfo")
+  template(v-if="orderInfo.length>0")
     .feeInfos
       .project-info-item(v-for="i,index in orderInfo" :class="{focus:isfocus(index)}" @click="projectIndex=index")
-        .project-info-item-title {{i.projectItem.project.englishName||i.projectItem.project.name}}
+        .project-info-item-title.border-bottom {{i.userName}}
+        .project-info-item-title {{i.project.englishName||i.project.name}}
         .project-info-item-line
           span technician
           span {{i.technicianName}}
         .project-info-item-line
           span tip
-          span ${{(i.projectItem.tip||0).toFixed(2)}}
+          span ${{(i.tip||0).toFixed(2)}}
         .project-info-item-line
           span total
-          span ${{getAmount(i.projectItem)}}
-      //- .project-info-item(v-for="i in 5"  @click="projectIndex=index")
-      //-   .project-info-item-title englishName
-      //-   .project-info-item-line
-      //-     span technician
-      //-     span technicianName
-      //-   .project-info-item-line
-      //-     span tip
-      //-     span $3123
-      //-   .project-info-item-line
-      //-     span total
-      //-     span $21324
+          span ${{getAmount(i)}}
     .detail
       .info.border
         .title Project Info
@@ -39,7 +29,7 @@
             .info-value ${{(projectInfo.tip||0).toFixed(2)}}
           .info-line
             .info-title technician
-            .info-value {{orderInfo[this.projectIndex].technicianName}}
+            .info-value {{projectInfo.technicianName}}
           .info-line.total
             .info-title total
             .info-value ${{(projectAccount+projectFee).toFixed(2)}}
@@ -60,7 +50,7 @@
     NumberPad(v-if="numberPadShow" :show.sync="numberPadShow" @numberChange="numberChange")
   template(v-if="orderInfo.length==0")
     .content-page Customer Screen
-  template(v-if="orderInfo.length==100")
+  template(v-if="false")
     .content-page Thanks!
 </template>
 
@@ -91,13 +81,13 @@ export default {
     isfocus(index) {
       return index == this.projectIndex
     },
-    getAmount(projectItem) {
-      let price = projectItem.project.price || 0
-      projectItem.additions.forEach(a => {
+    getAmount(i) {
+      let price = i.project.price || 0
+      i.additions.forEach((a) => {
         let p = a.price || 0
         price += p
       })
-      price += projectItem.tip || 0
+      price += i.tip || 0
       return price.toFixed(2)
     },
     select(percentage) {
@@ -115,14 +105,14 @@ export default {
     getFeeInfo() {
       const feeInfo = []
       const openRequest = indexedDB.open('MyDatabase')
-      openRequest.onerror = event => {
+      openRequest.onerror = (event) => {
         console.log(event, event.target.error.message)
       }
-      openRequest.onsuccess = event => {
+      openRequest.onsuccess = (event) => {
         this.db = event.target.result
         const t = this.db.transaction('feeInfo')
         const request = t.objectStore('feeInfo').openCursor()
-        request.onsuccess = e => {
+        request.onsuccess = (e) => {
           const cursor = e.target.result
           if (cursor) {
             feeInfo.push(cursor.value)
@@ -134,34 +124,43 @@ export default {
       console.log(this.feeInfo)
     },
     confirm() {
-      console.log(this.orderInfo)
-      window.ipcRenderer.send('send-fee', 998)
+      const tipList = this.orderInfo.map((i) => {
+        return {
+          id: i.id,
+          tabID: i.tabID,
+          orderID: i.orderID,
+          projectID: i.project.id,
+          technicianID: i.technicianID,
+          technicianName: i.technicianName,
+          tip: i.tip
+        }
+      })
+      window.ipcRenderer.send('send-fee', tipList)
     },
     receiveOrderInfo(event, arg) {
-      console.log('receiveOrderInfo')
-      this.orderInfo = arg.preAssignItems
+      console.log(arg.checkoutProjectList)
+      this.orderInfo = arg.checkoutProjectList
       this.projectIndex = 0
-      console.log(arg.preAssignItems)
+      console.log(arg.checkoutProjectList)
     }
   },
   computed: {
     totalAccount() {
       let total = 0
-      this.orderInfo.forEach(item => {
-        const projectItem = item.projectItem
-        let price = projectItem.project.price || 0
-        projectItem.additions.forEach(a => {
+      this.orderInfo.forEach((item) => {
+        let price = item.project.price || 0
+        item.additions.forEach((a) => {
           let p = a.price || 0
           price += p
         })
-        price += projectItem.tip || 0
+        price += item.tip || 0
         total += price
       })
       return total.toFixed(2)
     },
     projectAccount() {
       let price = this.projectInfo.project.price || 0
-      this.projectInfo.additions.forEach(a => {
+      this.projectInfo.additions.forEach((a) => {
         let p = a.price || 0
         price += p
       })
@@ -171,10 +170,7 @@ export default {
       return this.projectInfo.tip || 0
     },
     projectInfo() {
-      if (this.orderInfo[this.projectIndex] && this.orderInfo[this.projectIndex].projectItem) {
-        return this.orderInfo[this.projectIndex].projectItem
-      }
-      return null
+      return this.orderInfo[this.projectIndex] || null
     }
   }
 }
@@ -280,6 +276,7 @@ export default {
   align-items: center;
   justify-content: center;
   border-radius: 30px;
+  border: 2px solid #606266;
 }
 .submit-btn:active {
   color: #606266;
@@ -310,6 +307,9 @@ export default {
 }
 .total {
   border-top: 1px dashed slategray;
+}
+.border-bottom {
+  border-bottom: 1px dashed slategray;
 }
 .project {
   border-bottom: 1px dashed slategray;

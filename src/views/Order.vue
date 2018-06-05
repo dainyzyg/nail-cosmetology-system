@@ -1,10 +1,15 @@
 <template lang="pug">
   .page.col
     .breadcrumb-wraper
-      el-date-picker(v-model="dataTime" type="date" placeholder="选择日期" :clearable="false" size="large")
+      .checkout-wrapper
+        .checkout-title 已选用户：
+        el-tag.margin-left(@close="closeSelectedUsers(i)" closable v-for="i in selectedUsers" :key="i.id") {{i.userName}}
+        el-button.margin-left(@click="check" type="success" size="medium") 结账
+      el-date-picker.margin-left(v-model="dataTime" type="date" placeholder="选择日期" :clearable="false" size="large")
       el-button(style="margin-left:10px;" @click="add" icon="el-icon-circle-plus-outline" size="medium" type="primary") 新增订单
     .table-wraper
-      el-table.table(:data="tableData" border height="calc(100vh - 66px)")
+      el-table.table(@selection-change="handleSelectionChange" ref="table1" @select-all="cancelSelect" :data="tableData" border height="calc(100vh - 66px)")
+        el-table-column(type="selection" width="36")
         el-table-column(prop="name" label="姓名" :formatter="nameFormatter")
         el-table-column(prop="phone" label="电话")
         el-table-column(prop="orderInfo" :formatter="orderInfoFormatter" label="项目")
@@ -15,9 +20,9 @@
         //- el-table-column(label="状态" align="center" header-align="center" width="90")
         //-   template(slot-scope='scope')
         //-     span {{getOrderState(scope.row)}}
-        el-table-column(align="left" label="操作" width="280")
+        el-table-column(align="left" label="操作" width="180")
           template(slot-scope='scope')
-            el-button(@click='account(scope.row)' size='small' type="success") 结算
+            //- el-button(@click='account(scope.row)' size='small' type="success") 结算
             el-button(@click='edit(scope.row)' size='small' type="primary") 编辑
             el-button(@click='remove(scope.row.id)' size='small' type='danger') 删除
     el-dialog(title='新增' :visible.sync='addVisible' width="96vw" top="2vh" style="overflow:hidden;")
@@ -63,7 +68,8 @@
       .dialog-footer(slot='footer')
         el-button(@click="addVisible=false") 取 消
         el-button(type='primary' @click="save") 确 定
-    Account(:visible.sync="accountVisible" :data="accountOrderInfo" :preAssignItems="preAssignItems")
+    Account(:visible.sync="accountVisible" :data="checkoutProjectList")
+    //- Account(:visible.sync="accountVisible" :data="accountOrderInfo" :preAssignItems="preAssignItems")
 
 </template>
 <script>
@@ -98,7 +104,9 @@ export default {
       projectList: [],
       additionList: [],
       technicianList: [],
-      preAssignList: []
+      preAssignList: [],
+      multipleSelection: [],
+      selectedUsers: []
       // orderInfo: []
     }
   },
@@ -114,13 +122,28 @@ export default {
     window.ipcRenderer.removeListener('asynchronous-reply', this.getPreAssignList)
   },
   methods: {
+    check() {
+      this.accountVisible = true
+      window.ipcRenderer.send('notice-fee-screen', { checkoutProjectList: this.checkoutProjectList })
+      console.log(this.selectedUsers)
+    },
+    closeSelectedUsers(i) {
+      this.selectedUsers = this.selectedUsers.filter((item) => item.id != i.id)
+    },
+    handleSelectionChange(val) {
+      console.log(val)
+      this.multipleSelection = val
+    },
+    cancelSelect() {
+      this.$refs.table1.clearSelection()
+    },
     async getPreAssignList() {
       const r = await this.$algorithm.getAssignList()
       this.preAssignList = r.preAssignList
     },
     removeTab(targetName) {
       if (targetName == '1') return
-      this.otherFormDatas = this.otherFormDatas.filter(tab => tab.tabID != targetName)
+      this.otherFormDatas = this.otherFormDatas.filter((tab) => tab.tabID != targetName)
       if (this.tabsValue == targetName) {
         this.tabsValue = '1'
       }
@@ -162,10 +185,10 @@ export default {
       })
       if (r != 'confirm') return
       await this.$IDB.delete('order', id)
-      await this.$IDB.executeTransaction(['assign'], 'readwrite', t => {
+      await this.$IDB.executeTransaction(['assign'], 'readwrite', (t) => {
         const store = t.objectStore('assign')
         const request = store.index('orderID').openCursor(IDBKeyRange.only(id))
-        request.onsuccess = event => {
+        request.onsuccess = (event) => {
           const cursor = event.target.result
           if (cursor) {
             cursor.delete()
@@ -189,7 +212,7 @@ export default {
     nameFormatter(row, column, cell) {
       const nameList = [row.name]
       const otherFormDatas = row.otherFormDatas || []
-      return nameList.concat(otherFormDatas.map(x => x.name)).join(',')
+      return nameList.concat(otherFormDatas.map((x) => x.name)).join(',')
     },
     timeFormatter(row, column, cell) {
       if (cell) {
@@ -273,7 +296,7 @@ export default {
           kind: this.selectedKind,
           project: this.selectedProject,
           additions: [...this.selectedAdditions],
-          technicians: this.selectedTechnicians.map(item => {
+          technicians: this.selectedTechnicians.map((item) => {
             return { id: item.id, name: item.name }
           })
         }
@@ -283,7 +306,7 @@ export default {
     },
     addProject() {
       this.askResult = {}
-      this.askAddList = this.additionList.filter(a => a.ask && !this.selectedAdditions.find(s => s.id == a.id))
+      this.askAddList = this.additionList.filter((a) => a.ask && !this.selectedAdditions.find((s) => s.id == a.id))
       if (this.askAddList.length > 0) {
         this.addAskVisible = true
         return
@@ -292,7 +315,7 @@ export default {
         kind: this.selectedKind,
         project: this.selectedProject,
         additions: [...this.selectedAdditions],
-        technicians: this.selectedTechnicians.map(item => {
+        technicians: this.selectedTechnicians.map((item) => {
           return { id: item.id, name: item.name }
         })
       }
@@ -317,10 +340,10 @@ export default {
     },
     async getList(storeName, dataName, parentID) {
       this[dataName] = []
-      this.$IDB.executeTransaction([storeName], 'readonly', t => {
+      this.$IDB.executeTransaction([storeName], 'readonly', (t) => {
         const store = t.objectStore(storeName)
         const request = store.index('parentID').openCursor(IDBKeyRange.only(parentID))
-        request.onsuccess = event => {
+        request.onsuccess = (event) => {
           const cursor = event.target.result
           if (cursor) {
             this[dataName].push(cursor.value)
@@ -330,10 +353,10 @@ export default {
       })
     },
     async getKindList(storeName, dataName) {
-      await this.$IDB.executeTransaction(storeName, 'readonly', t => {
+      await this.$IDB.executeTransaction(storeName, 'readonly', (t) => {
         const store = t.objectStore(storeName)
         const request = store.openCursor()
-        request.onsuccess = event => {
+        request.onsuccess = (event) => {
           const cursor = event.target.result
           if (cursor) {
             this[dataName].push(cursor.value)
@@ -344,10 +367,10 @@ export default {
     },
     async getData() {
       const dataList = []
-      await this.$IDB.executeTransaction(['order'], 'readonly', t => {
+      await this.$IDB.executeTransaction(['order'], 'readonly', (t) => {
         const store = t.objectStore('order')
         const request = store.index('orderDate').openCursor(IDBKeyRange.bound(this.dateBegin, this.dateEnd), 'prev')
-        request.onsuccess = event => {
+        request.onsuccess = (event) => {
           const cursor = event.target.result
           if (cursor) {
             dataList.push(cursor.value)
@@ -372,6 +395,40 @@ export default {
     // }
   },
   watch: {
+    multipleSelection(val) {
+      const list = this.selectedUsers.filter((item) => val.find((x) => x.id == item.orderID))
+      val.forEach((e) => {
+        if (list.find((x) => x.orderID == e.id)) {
+          return
+        }
+        const preAssignItems = this.preAssignList.filter((x) => x.orderID == e.id)
+        const orderID = e.id
+        const preorderTime = e.preorderTime
+        list.push({
+          id: `${orderID}${e.tabID}`,
+          orderID,
+          preorderTime,
+          userName: e.name,
+          orderInfo: e.orderInfo,
+          tabID: e.tabID,
+          preAssignItems
+        })
+        e.otherFormDatas.forEach((o) => {
+          const preAssignItems = this.preAssignList.filter((x) => x.orderID == o.tabID)
+          list.push({
+            id: `${orderID}${o.tabID}`,
+            orderID,
+            preorderTime,
+            userName: o.name,
+            orderInfo: o.orderInfo,
+            tabID: o.tabID,
+            preAssignItems
+          })
+        })
+      })
+
+      this.selectedUsers = list
+    },
     dataTime(val) {
       this.getData()
     },
@@ -404,19 +461,34 @@ export default {
     }
   },
   computed: {
+    checkoutProjectList() {
+      const list = []
+      this.selectedUsers.forEach((e) => {
+        e.orderInfo.forEach((o) => {
+          const item = e.preAssignItems.find((x) => x.projectID == o.project.id)
+          list.push({
+            ...o,
+            ...e,
+            technicianName: item.technicianName,
+            technicianID: item.technicianID
+          })
+        })
+      })
+      return list
+    },
     preAssignItems() {
-      const preAssignItems = this.preAssignList.filter(x => x.orderID == this.accountOrderInfo.id)
+      const preAssignItems = this.preAssignList.filter((x) => x.orderID == this.accountOrderInfo.id)
       console.log({ preAssignItems, accountOrderInfo: this.accountOrderInfo })
       return preAssignItems
     },
     orderInfo() {
-      return this.allFormDataList.find(x => x.tabID == this.tabsValue).orderInfo
+      return this.allFormDataList.find((x) => x.tabID == this.tabsValue).orderInfo
     },
     allFormDataList() {
       return [this.formData].concat(this.otherFormDatas)
     },
     selectFormData() {
-      return this.allFormDataList.find(x => x.tabID == this.tabsValue)
+      return this.allFormDataList.find((x) => x.tabID == this.tabsValue)
     },
     dateBegin() {
       return new Date(this.dataTime.toDateString())
@@ -431,6 +503,17 @@ export default {
 }
 </script>
 <style scoped>
+.checkout-title {
+  color: #606266;
+}
+.checkout-wrapper {
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+.margin-left {
+  margin-left: 10px;
+}
 .arrive-title {
   padding-left: 10px;
   padding-right: 10px;
