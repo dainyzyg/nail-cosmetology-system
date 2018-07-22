@@ -3,7 +3,8 @@ const path = require('path')
 module.exports = {
   entry: {
     big: './other_screens/src/big.js',
-    fee: './other_screens/src/fee.js'
+    fee: './other_screens/src/fee.js',
+    dev: './other_screens/src/dev.js'
   },
   module: {
     rules: [

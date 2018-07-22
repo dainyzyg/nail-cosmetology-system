@@ -11,7 +11,9 @@
       el-table.table(@selection-change="handleSelectionChange" ref="table1" @select-all="cancelSelect" :data="tableData" border height="calc(100vh - 66px)")
         el-table-column(type="selection" width="36")
         el-table-column(prop="name" label="姓名" :formatter="nameFormatter")
-        el-table-column(prop="phone" label="电话")
+        el-table-column(label="结账信息")
+          template(slot-scope="scope")
+            .blue-font {{checkoutFormatter(scope.row)}}
         el-table-column(prop="orderInfo" :formatter="orderInfoFormatter" label="项目")
         el-table-column(prop="orderDate" :formatter="timeFormatter" label="订单时间" align="center" header-align="center" width="80")
         el-table-column(prop="isPreorder" label="预约/到店" align="center" header-align="center" width="120")
@@ -68,7 +70,7 @@
       .dialog-footer(slot='footer')
         el-button(@click="addVisible=false") 取 消
         el-button(type='primary' @click="save") 确 定
-    Account(:visible.sync="accountVisible" :data="checkoutProjectList")
+    Account(:visible.sync="accountVisible" :data="checkoutProjectList" @chectout="getData")
     //- Account(:visible.sync="accountVisible" :data="accountOrderInfo" :preAssignItems="preAssignItems")
 
 </template>
@@ -122,6 +124,9 @@ export default {
     window.ipcRenderer.removeListener('asynchronous-reply', this.getPreAssignList)
   },
   methods: {
+    chectout() {
+      console.log('chectout')
+    },
     check() {
       this.accountVisible = true
       window.ipcRenderer.send('notice-fee-screen', { checkoutProjectList: this.checkoutProjectList })
@@ -198,6 +203,23 @@ export default {
       })
       this.getData()
       this.$algorithm.assignpProjects()
+    },
+    checkoutFormatter(row, column, cell) {
+      if (row.tipObj) {
+        const checkoutUsers = []
+        for (let tabID in row.tipObj) {
+          if (tabID == 1) {
+            checkoutUsers.push(row.name)
+          } else {
+            const other = row.otherFormDatas.find((x) => x.tabID == tabID)
+            if (other) {
+              checkoutUsers.push(other.name)
+            }
+          }
+        }
+        return checkoutUsers.join(',')
+      }
+      return ''
     },
     orderInfoFormatter(row, column, cell) {
       if (cell) {
@@ -503,6 +525,9 @@ export default {
 }
 </script>
 <style scoped>
+.blue-font {
+  color: #409eff;
+}
 .checkout-title {
   color: #606266;
 }

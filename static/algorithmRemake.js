@@ -18,14 +18,22 @@ window.algorithm = {
   openWindow(screenName, config = { width: 800, height: 600 }) {
     console.log('openWindow')
     const BrowserWindow = require('electron').remote.BrowserWindow
+    // config.show = false
     let win = new BrowserWindow(config)
     win.on('closed', () => {
       win = null
     })
-    win.webContents.toggleDevTools()
+    // win.webContents.toggleDevTools()
     // 加载远程URL
     win.loadURL(`atom://atom/static/${screenName}.html`)
     // win.loadURL('http://localhost:8080')
+  },
+  openDevWin() {
+    this.openWindow('dev-screen', { width: 1024, height: 768 })
+  },
+  async setDev(preAssignList) {
+    window.ipcRenderer.send('send-dev', JSON.stringify(preAssignList))
+    console.log('setDev')
   },
   workBeginTime() {
     const day = this.getDateNow().getDay()
@@ -207,6 +215,7 @@ window.algorithm = {
     await window.IDB.put('assignList', assignList)
     ipcRenderer.send('asynchronous-message', preAssignList)
     console.timeEnd('assignpProjects')
+    // debugger
     console.log(r)
   },
   counts(preAssignList) {
@@ -224,60 +233,35 @@ window.algorithm = {
     console.timeEnd('count')
     return preAssignList
   },
-  assign({
-    technicianList,
-    orderList,
-    level,
-    preAssignList,
-    workListObj,
-    historyPreAssignList,
-    historyItems,
-    doDelayProjectList
-  }) {
-    historyItems = historyItems || {}
-    historyPreAssignList = historyPreAssignList || {}
-    historyPreAssignList[level] = preAssignList
-    doDelayProjectList = doDelayProjectList || []
-    // if (level > 1) return { state: 'fail' }
+  assign({ technicianList, orderList, preAssignList }) {
+    const historyPreAssignList = {}
+    let level = 1
+    let preAssignListVar = preAssignList
+    // debugger
     for (let orderItem of orderList) {
-      const r = this.assignOrder({
+      if (orderItem.name == '1207') {
+        // debugger
+      }
+      const assignOrderR = this.assignOrder({
         technicianList,
         orderList,
         orderItem,
-        level,
-        preAssignList,
-        workListObj,
-        historyPreAssignList,
-        historyItems,
-        doDelayProjectList: [...doDelayProjectList]
+        preAssignList: preAssignListVar
       })
-      if (r.state == 'continue') {
+      if (assignOrderR.state == 'fail') {
+        console.log(`订单 ${orderItem.name} 无法排队`)
         continue
-      } else if (r.state == 'fail') {
-        return r
-      } else if (r.state == 'complete') {
-        return r
       }
+      if (assignOrderR.length == preAssignListVar.length) {
+        continue
+      }
+      preAssignListVar = assignOrderR
+      historyPreAssignList[level] = preAssignListVar
+      level += 1
     }
-    return { preAssignList, state: 'complete', historyPreAssignList, historyLevel: level }
+    return { preAssignList: preAssignListVar, state: 'complete', historyPreAssignList, historyLevel: level - 1 }
   },
-  assignOrder({
-    technicianList,
-    orderList,
-    orderItem,
-    level,
-    preAssignList,
-    workListObj,
-    historyPreAssignList,
-    historyItems,
-    doDelayProjectList
-  }) {
-    // if (Object.keys(historyPreAssignList).length == 91 && orderItem.name == '1128-1') {
-    //   debugger
-    // }
-    // if (Object.keys(historyPreAssignList).length == 180) {
-    //   return { preAssignList, state: 'complete', historyPreAssignList }
-    // }
+  assignOrder({ technicianList, orderList, orderItem, preAssignList }) {
     const priorityTime = localStorage.priorityTime
     orderItem.orderInfo.sort((x, y) => x.kind.priority - y.kind.priority)
     const projectQueue = []
@@ -290,11 +274,10 @@ window.algorithm = {
       return !preAssignList.find((x) => x.orderID == orderItem.id && x.projectID == projectItem.project.id)
     })
     if (notAssignProject.length == 0) {
-      return { state: 'continue' }
+      return preAssignList
     }
-    if (Object.keys(historyPreAssignList).length == 130) {
-      debugger
-    }
+
+    // rewrite
     notAssignProject.forEach((projectItem, i) => {
       const projectPriorityTime = i * priorityTime
       const technicianMatchList = this.findTechnician({ projectItem, technicianList, projectPriorityTime })
@@ -304,440 +287,269 @@ window.algorithm = {
       prevProjectEndTime,
       orderItem,
       projectQueue,
-      workListObj,
       preAssignList
     })
     for (let TechnicianTimeItem of TechnicianTimeList) {
-      if (TechnicianTimeItem.jump) {
-        // 必做插队
-        let oldDoDelayProjectList = doDelayProjectList || []
-        let newDoDelayProjectList = TechnicianTimeItem.doDelayProjectList || []
-        newDoDelayProjectList = [...oldDoDelayProjectList, ...newDoDelayProjectList]
-        const r = this.assign({
-          technicianList,
-          orderList,
-          level: level + 1,
-          preAssignList: TechnicianTimeItem.preAssignList,
-          doDelayProjectList: newDoDelayProjectList,
-          workListObj,
-          historyPreAssignList,
-          historyItems
-        })
-        if (r.state == 'fail' && r.level == level) {
-          continue
-        } else {
-          return r
-        }
-      }
-
-      if (orderMatchPreAssignList.find((x) => x.projectID == TechnicianTimeItem.projectItem.project.id)) {
-        continue
-      }
+      // if (orderMatchPreAssignList.find((x) => x.projectID == TechnicianTimeItem.projectItem.project.id)) {
+      //   continue
+      // }
       if (!TechnicianTimeItem.last) {
-        // 判断能否插在必做项目的前面
-        if (TechnicianTimeItem.next.projectItem.project.do) {
-          const isDoDelay = doDelayProjectList.find(
-            (x) => x.projectID == TechnicianTimeItem.projectItem.project.id && x.orderID == orderItem.id
-          )
-          const endTime = TechnicianTimeItem.timeStart.getTime() + TechnicianTimeItem.duration * 60 * 1000
-          const nextStartTime = TechnicianTimeItem.next.timeStart.getTime()
-          if (isDoDelay && nextStartTime < endTime) {
-            continue
-          }
-          // const mustDoneAdvanceTime = parseInt(localStorage.mustDoneAdvanceTime)
-          // let earliestOrderTimeTemp = new Date(Math.max(prevProjectEndTime, orderItem.preorderTime))
-          // if (TechnicianTimeItem.projectItem.project.do) {
-          //   earliestOrderTimeTemp = new Date(earliestOrderTimeTemp.getTime() - mustDoneAdvanceTime * 60 * 1000)
-          // }
-          // if (TechnicianTimeItem.next.earliestOrderTime <= earliestOrderTimeTemp) {
-          //   continue
-          // }
+        const endTime = TechnicianTimeItem.timeStart.getTime() + TechnicianTimeItem.duration * 60 * 1000
+        const isNextDelay = TechnicianTimeItem.next.timeStart.getTime() < endTime
+        if (TechnicianTimeItem.next.isAdjust && isNextDelay) {
+          continue
         }
-        if (TechnicianTimeItem.next.isAdjust) {
-          const endTime = TechnicianTimeItem.timeStart.getTime() + TechnicianTimeItem.duration * 60 * 1000
-          const nextStartTime = TechnicianTimeItem.next.timeStart.getTime()
-          if (nextStartTime >= endTime) {
-            const assignItemResult = this.assignItem({
+        if (!TechnicianTimeItem.next.isAdjust) {
+          // cha dui
+          // return this.
+          const jumpTheQueueR = this.jumpTheQueue({
+            technicianList,
+            orderList,
+            prevProjectEndTime,
+            orderItem,
+            TechnicianTimeItem,
+            preAssignList
+          })
+          if (jumpTheQueueR) {
+            const assignOrderR = this.assignOrder({
               technicianList,
               orderList,
-              workListObj,
-              prevProjectEndTime,
               orderItem,
-              TechnicianTimeItem,
-              level,
-              preAssignList,
-              historyPreAssignList,
-              historyItems,
-              doDelayProjectList
+              preAssignList: jumpTheQueueR
             })
-            if (assignItemResult.complete) {
-              return assignItemResult
-            }
-            if (assignItemResult.state == 'complete') {
-              const r = this.assign({
-                technicianList,
-                orderList,
-                level: level + 1,
-                preAssignList: assignItemResult.preAssignList,
-                workListObj,
-                doDelayProjectList: [...doDelayProjectList],
-                historyPreAssignList,
-                historyItems
-              })
-              if (r.state == 'fail' && r.level == level) {
-                continue
-              } else {
-                return r
-              }
-              // return this.assignOrder({
-              //   orderList,
-              //   technicianList,
-              //   orderItem,
-              //   level,
-              //   preAssignList,
-              //   workListObj,
-              //   doDelayProjectList: [...doDelayProjectList],
-              //   historyPreAssignList
-              // })
-            } else if (assignItemResult.state == 'fail') {
-              return assignItemResult
-            } else {
-              const r = this.assign({
-                technicianList,
-                orderList,
-                level: level + 1,
-                preAssignList: assignItemResult.preAssignList,
-                workListObj,
-                doDelayProjectList: [...doDelayProjectList],
-                historyPreAssignList,
-                historyItems
-              })
-              if (r.state == 'fail' && r.level == level) {
-                continue
-              } else {
-                return r
-              }
-            }
+            return assignOrderR
           } else {
             continue
           }
         }
-        const newPreAssignList = this.reAssign({
-          prevProjectEndTime,
-          orderItem,
-          TechnicianTimeItem,
-          level,
-          preAssignList,
-          historyPreAssignList,
-          historyItems,
-          doDelayProjectList
-        })
-        if (!newPreAssignList) {
-          continue
-        } else if (newPreAssignList.state == 'fail') {
-          return newPreAssignList
-        }
-        const r = this.assign({
-          technicianList,
-          orderList,
-          level: level + 1,
-          preAssignList: newPreAssignList,
-          workListObj,
-          doDelayProjectList: [...doDelayProjectList],
-          historyPreAssignList,
-          historyItems
-        })
-        if (r.state == 'fail' && r.level == level) {
-          continue
-        } else {
-          return r
-        }
       }
-      const assignItemResult = this.assignItem({
+      const assignItemR = this.assignItem({
         technicianList,
         orderList,
-        workListObj,
         prevProjectEndTime,
         orderItem,
         TechnicianTimeItem,
-        level,
-        preAssignList,
-        historyPreAssignList,
-        doDelayProjectList,
-        historyItems
+        preAssignList
       })
-      if (assignItemResult.complete) {
-        return assignItemResult
-      }
-      if (assignItemResult.state == 'complete') {
-        const r = this.assign({
-          technicianList,
-          orderList,
-          level: level + 1,
-          preAssignList: assignItemResult.preAssignList,
-          workListObj,
-          doDelayProjectList: [...doDelayProjectList],
-          historyPreAssignList,
-          historyItems
-        })
-        if (r.state == 'fail' && r.level == level) {
-          continue
-        } else {
-          return r
-        }
-        // return this.assignOrder({
-        //   orderList,
-        //   technicianList,
-        //   orderItem,
-        //   level,
-        //   preAssignList,
-        //   workListObj,
-        //   doDelayProjectList: [...doDelayProjectList],
-        //   historyPreAssignList
-        // })
-      } else if (assignItemResult.state == 'fail') {
-        return assignItemResult
-      } else {
-        const r = this.assign({
-          technicianList,
-          orderList,
-          level: level + 1,
-          preAssignList: assignItemResult.preAssignList,
-          workListObj,
-          doDelayProjectList: [...doDelayProjectList],
-          historyPreAssignList,
-          historyItems
-        })
-        if (r.state == 'fail' && r.level == level) {
-          continue
-        } else {
-          return r
-        }
-      }
+      const assignOrderR = this.assignOrder({
+        technicianList,
+        orderList,
+        orderItem,
+        preAssignList: assignItemR
+      })
+      return assignOrderR
     }
     console.log('loooooooooooooooooooooop end')
     return { state: 'fail' }
   },
-  reAssign({
+  judgeDelay({ orderItem, TechnicianTimeItem, rePreAssignList, prevProjectEndTime }) {
+    const delayTime = parseInt(localStorage.delayTime) * 60 * 1000
+    const prevDif = TechnicianTimeItem.timeStart - prevProjectEndTime
+    if (!rePreAssignList) {
+      return {
+        state: 'success'
+      }
+    }
+    if (prevDif > delayTime) {
+      const item = rePreAssignList.find(
+        (x) => x.orderID == orderItem.id && x.projectID == TechnicianTimeItem.projectItem.project.id
+      )
+      if (!item) {
+        return {
+          state: 'success'
+        }
+      }
+      const originalTimeStart = item.originalTimeStart || item.timeStart
+      const timeEarlier = new Date(Math.min(originalTimeStart, item.timeStart))
+      if (TechnicianTimeItem.timeStart.getTime() - timeEarlier.getTime() > delayTime) {
+        console.log('hasDelay')
+        return { state: 'fail', originalTimeStart }
+      }
+      // 未完成，如果项目的序号发生变化还需要调整（比如客户的第一个项目和第二个项目互换了，原始开始时间就没有意义了）
+    }
+    return {
+      state: 'success'
+    }
+  },
+  jumpTheQueue({
+    originalTimeStart,
+    technicianList,
     prevProjectEndTime,
+    orderList,
     orderItem,
     TechnicianTimeItem,
-    level,
-    preAssignList,
-    historyPreAssignList,
-    historyItems,
-    doDelayProjectList
+    preAssignList
   }) {
-    const hasDelayReturn = this.hasDelay({
-      TechnicianTimeItem,
-      prevProjectEndTime,
-      level,
-      historyItems,
-      historyPreAssignList,
-      orderItem,
-      doDelayProjectList
-    })
-    if (hasDelayReturn) {
-      return hasDelayReturn
-    }
+    // newPreAssignList rePreAssignList
     const newPreAssignList = []
-    let findNext = false
+    const rePreAssignList = []
+    const rePreAssignOrderList = new Set()
+    const nextItemList = preAssignList.filter(
+      (x) =>
+        x.technician &&
+        !x.isAdjust &&
+        x.technician.id == TechnicianTimeItem.technicianItem.technician.id &&
+        TechnicianTimeItem.timeStart < x.timeStart
+    )
+    // debugger
     for (let item of preAssignList) {
-      if (item.orderID == TechnicianTimeItem.next.orderID && item.projectID == TechnicianTimeItem.next.projectID) {
-        findNext = true
-      }
-      if (
-        item.technicianID == TechnicianTimeItem.technicianItem.technician.id &&
-        item.timeEnd.getTime() > TechnicianTimeItem.timeStart.getTime() &&
-        item.timeStart.getTime() < TechnicianTimeItem.timeStart.getTime() + TechnicianTimeItem.duration * 60 * 1000
-      ) {
-        if (item.isAdjust) {
-          console.log('reAssign isAdjust return false')
-          return false
-        }
-        continue
-      }
-
-      if (!findNext || orderItem.id == item.orderID) {
+      const isfind = nextItemList.find(
+        (x) => !item.isAdjust && item.orderID == x.orderID && item.timeStart >= x.timeStart
+      )
+      if (isfind) {
+        rePreAssignList.push(item)
+        rePreAssignOrderList.add(item.orderItem)
+      } else {
         newPreAssignList.push(item)
       }
     }
-    const preAssignListItem = {
-      earliestOrderTime: new Date(Math.max(orderItem.preorderTime, prevProjectEndTime)),
-      date: this.getDateStart(),
-      state: 'unstart',
-      technicianName: TechnicianTimeItem.technicianItem.technician.name,
-      orderName: orderItem.name,
-      projectItem: TechnicianTimeItem.projectItem,
-      projectName: TechnicianTimeItem.projectItem.project.name,
-      technicianID: TechnicianTimeItem.technicianItem.technician.id,
-      technician: TechnicianTimeItem.technicianItem.technician,
-      orderID: orderItem.id,
-      orderItem,
-      preorderTime: orderItem.preorderTime,
-      projectID: TechnicianTimeItem.projectItem.project.id,
-      timeStart: TechnicianTimeItem.timeStart,
-      duration: TechnicianTimeItem.duration,
-      timeEnd: new Date(TechnicianTimeItem.timeStart.getTime() + TechnicianTimeItem.duration * 60 * 1000)
-    }
 
-    const exchangePreAssignList = this.hasExchangeProject({
+    const assignItemR = this.assignItem({
+      originalTimeStart,
+      technicianList,
+      prevProjectEndTime,
       orderItem,
-      preAssignList: newPreAssignList,
-      assignItem: preAssignListItem,
       TechnicianTimeItem,
-      historyItems,
-      level
+      preAssignList: newPreAssignList
     })
-    if (exchangePreAssignList) {
-      return exchangePreAssignList
-    }
-    historyItems[level] = preAssignListItem
-    newPreAssignList.push(preAssignListItem)
-    return newPreAssignList
+
+    const r = this.rePreAssign({
+      technicianList,
+      preAssignList: assignItemR,
+      rePreAssignList,
+      rePreAssignOrderList: [...rePreAssignOrderList].sort((a, b) => a.orderDate.getTime() - b.orderDate.getTime())
+    })
+    return r
   },
-  // hasDelay({ TechnicianTimeItem, prevProjectEndTime, level, historyItems, orderItem, doDelayProjectList }) {
-  //   const delayTime = parseInt(localStorage.delayTime) * 60 * 1000
-  //   const prevDif = TechnicianTimeItem.timeStart - prevProjectEndTime
-  //   if (prevDif > delayTime) {
-  //     for (let i = 1; i < level; i++) {
-  //       let item = null
+  rePreAssign({ technicianList, preAssignList, rePreAssignList, rePreAssignOrderList }) {
+    const historyPreAssignList = {}
+    let level = 0
+    let preAssignListVar = preAssignList
+    for (let orderItem of rePreAssignOrderList) {
+      preAssignListVar = this.reAssignOrder({
+        technicianList,
+        orderItem,
+        preAssignList: preAssignListVar,
+        rePreAssignList
+      })
+      if (!preAssignListVar) {
+        return false
+      }
+      historyPreAssignList[level] = preAssignListVar
+      level += 1
+    }
+    return preAssignListVar
+  },
+  reAssignOrder({ technicianList, orderItem, preAssignList, rePreAssignList }) {
+    if (orderItem.name == '1150') {
+      // debugger
+    }
+    const priorityTime = localStorage.priorityTime
+    orderItem.orderInfo.sort((x, y) => x.kind.priority - y.kind.priority)
+    const projectQueue = []
+    if (!preAssignList) {
+      return false
+    }
+    const orderMatchPreAssignList = preAssignList.filter((x) => x.orderID == orderItem.id)
+    let prevProjectEndTime = new Date(0)
+    if (orderMatchPreAssignList.length) {
+      prevProjectEndTime = Math.max(...orderMatchPreAssignList.map((x) => x.timeEnd))
+    }
+    const notAssignProject = orderItem.orderInfo.filter((projectItem) => {
+      return !preAssignList.find((x) => x.orderID == orderItem.id && x.projectID == projectItem.project.id)
+    })
+    if (notAssignProject.length == 0) {
+      return preAssignList
+    }
 
-  //       if (
-  //         historyItems[i] &&
-  //         historyItems[i].orderID == orderItem.id &&
-  //         historyItems[i].projectID == TechnicianTimeItem.projectItem.project.id
-  //       ) {
-  //         item = historyItems[i]
-  //       }
-  //       // const delayTime = parseInt(localStorage.delayTime) * 60 * 1000
-  //       if (item && TechnicianTimeItem.timeStart.getTime() - item.timeStart.getTime() > delayTime) {
-  //         return true
-  //       }
-
-  //       const isDoDelay = doDelayProjectList.find(
-  //         (x) => item && x.projectID == item.projectID && x.orderID == item.orderID
-  //       )
-  //       const mustDoneDelayTime = parseInt(localStorage.mustDoneDelayTime) * 60 * 1000
-  //       if (
-  //         isDoDelay &&
-  //         item &&
-  //         TechnicianTimeItem.timeStart.getTime() - item.timeStart.getTime() > mustDoneDelayTime
-  //       ) {
-  //         return true
-  //       }
-  //     }
-  //   }
-  //   return false
-  // },
-  hasDelay({
-    TechnicianTimeItem,
-    prevProjectEndTime,
-    level,
-    historyItems,
-    historyPreAssignList,
-    orderItem,
-    doDelayProjectList
-  }) {
-    // return false
-    const delayTime = parseInt(localStorage.delayTime) * 60 * 1000
-    const prevDif = TechnicianTimeItem.timeStart - prevProjectEndTime
-
-    if (prevDif > delayTime) {
-      for (let i = level; i >= 1; i--) {
-        const item = historyPreAssignList[i].find(
-          (x) => x.orderID == orderItem.id && x.projectID == TechnicianTimeItem.projectItem.project.id
-        )
-        // const delayTime = parseInt(localStorage.delayTime) * 60 * 1000
-        if (item && TechnicianTimeItem.timeStart.getTime() - item.timeStart.getTime() > delayTime) {
-          console.log('hasDelay')
-          for (let j = i + 1; j <= level; j++) {
-            const jItem = historyPreAssignList[j].find(
-              (x) =>
-                x.technicianID == item.technicianID && !(item.timeStart >= x.timeEnd || item.timeEnd <= x.timeStart)
-            )
-            if (jItem) {
-              return { state: 'fail', level: j - 1 }
-            }
-          }
-          return { state: 'fail', level: i }
+    // rewrite
+    notAssignProject.forEach((projectItem, i) => {
+      const projectPriorityTime = i * priorityTime
+      const technicianMatchList = this.findTechnician({ projectItem, technicianList, projectPriorityTime })
+      projectQueue.push(...technicianMatchList)
+    })
+    const TechnicianTimeList = this.getTechnicianTimeList({
+      prevProjectEndTime,
+      orderItem,
+      projectQueue,
+      preAssignList
+    })
+    for (let TechnicianTimeItem of TechnicianTimeList) {
+      const judgeDelayR = this.judgeDelay({ orderItem, rePreAssignList, prevProjectEndTime, TechnicianTimeItem })
+      if (judgeDelayR.state == 'fail') {
+        return false
+      }
+      if (!TechnicianTimeItem.last) {
+        const endTime = TechnicianTimeItem.timeStart.getTime() + TechnicianTimeItem.duration * 60 * 1000
+        const isNextDelay = TechnicianTimeItem.next.timeStart.getTime() < endTime
+        if (TechnicianTimeItem.next.isAdjust && isNextDelay) {
+          continue
         }
-
-        const isDoDelay = doDelayProjectList.find(
-          (x) => item && x.projectID == item.projectID && x.orderID == item.orderID
-        )
-        const mustDoneDelayTime = parseInt(localStorage.mustDoneDelayTime) * 60 * 1000
-        if (
-          isDoDelay &&
-          item &&
-          TechnicianTimeItem.timeStart.getTime() - item.timeStart.getTime() > mustDoneDelayTime
-        ) {
-          console.log('hasDelay')
-          for (let j = i + 1; j <= level; j++) {
-            const jItem = historyPreAssignList[j].find(
-              (x) =>
-                x.technicianID == item.technicianID && !(item.timeStart >= x.timeEnd || item.timeEnd <= x.timeStart)
-            )
-            if (jItem) {
-              return { state: 'fail', level: j - 1 }
-            }
+        if (!TechnicianTimeItem.next.isAdjust) {
+          // cha dui
+          // return this.
+          const jumpTheQueueR = this.jumpTheQueue({
+            technicianList,
+            prevProjectEndTime,
+            orderItem,
+            TechnicianTimeItem,
+            preAssignList,
+            originalTimeStart: judgeDelayR.originalTimeStart
+          })
+          if (jumpTheQueueR) {
+            const assignOrderR = this.reAssignOrder({
+              technicianList,
+              orderItem,
+              preAssignList: jumpTheQueueR
+            })
+            return assignOrderR
+          } else {
+            continue
           }
-          return { state: 'fail', level: i }
         }
       }
+      const assignItemR = this.assignItem({
+        technicianList,
+        prevProjectEndTime,
+        orderItem,
+        TechnicianTimeItem,
+        preAssignList,
+        originalTimeStart: judgeDelayR.originalTimeStart
+      })
+      const assignOrderR = this.reAssignOrder({
+        technicianList,
+        orderItem,
+        preAssignList: assignItemR
+      })
+      return assignOrderR
     }
-    return false
+    console.log('loooooooooooooooooooooop end')
+    return { state: 'fail' }
   },
   assignItem({
     technicianList,
     orderList,
-    workListObj,
     prevProjectEndTime,
     orderItem,
     TechnicianTimeItem,
-    level,
     preAssignList,
-    historyPreAssignList,
-    historyItems,
-    doDelayProjectList
+    originalTimeStart
   }) {
-    const hasDelayReturn = this.hasDelay({
-      TechnicianTimeItem,
-      prevProjectEndTime,
-      level,
-      historyItems,
-      historyPreAssignList,
-      orderItem,
-      doDelayProjectList
-    })
-    if (hasDelayReturn) {
-      return hasDelayReturn
-    }
-    // const delayTime = parseInt(localStorage.delayTime) * 60 * 1000
-    // const prevDif = TechnicianTimeItem.timeStart - prevProjectEndTime
-
-    // if (prevDif > delayTime) {
-    //   for (let i = 1; i < level; i++) {
-    //     const item = historyPreAssignList[i].find(
-    //       (x) => x.orderID == orderItem.id && x.projectID == TechnicianTimeItem.projectItem.project.id
-    //     )
-    //     // const delayTime = parseInt(localStorage.delayTime) * 60 * 1000
-    //     if (item && TechnicianTimeItem.timeStart.getTime() - item.timeStart.getTime() > delayTime) {
-    //       return { state: 'fail' }
-    //     }
-
-    //     const isDoDelay = doDelayProjectList.find(
-    //       (x) => item && x.projectID == item.projectID && x.orderID == item.orderID
-    //     )
-    //     const mustDoneDelayTime = parseInt(localStorage.mustDoneDelayTime) * 60 * 1000
-    //     if (
-    //       isDoDelay &&
-    //       item &&
-    //       TechnicianTimeItem.timeStart.getTime() - item.timeStart.getTime() > mustDoneDelayTime
-    //     ) {
-    //       return { state: 'fail' }
-    //     }
-    //   }
+    // 项目延迟判断
+    // const hasDelayReturn = this.hasDelay({
+    //   TechnicianTimeItem,
+    //   prevProjectEndTime,
+    //   level,
+    //   historyItems,
+    //   historyPreAssignList,
+    //   orderItem,
+    //   doDelayProjectList
+    // })
+    // if (hasDelayReturn) {
+    //   return hasDelayReturn
+    // }
+    // if (orderItem.name == '1155') {
+    //   debugger
     // }
     const assignItem = {
       earliestOrderTime: new Date(Math.max(orderItem.preorderTime, prevProjectEndTime)),
@@ -758,40 +570,57 @@ window.algorithm = {
       timeEnd: new Date(TechnicianTimeItem.timeStart.getTime() + TechnicianTimeItem.duration * 60 * 1000)
     }
 
+    // 先来先做判断
     const newPreAssignList = this.hasExchangeProject({
-      historyItems,
-      level,
+      technicianList,
       orderItem,
       preAssignList,
       assignItem,
       TechnicianTimeItem
     })
-
     if (newPreAssignList) {
-      const r = this.assign({
-        technicianList,
-        orderList,
-        level: level + 1,
-        preAssignList: newPreAssignList,
-        workListObj,
-        doDelayProjectList: [...doDelayProjectList],
-        historyPreAssignList,
-        historyItems
-      })
-      if (r.state == 'complete') {
-        r.complete = true
-        return r
+      const rePreAssignOrderList = new Set()
+      for (let item of preAssignList) {
+        const isfind = newPreAssignList.find((x) => item.orderID == x.orderID && item.projectID == x.projectID)
+        if (!isfind) {
+          rePreAssignOrderList.add(item.orderItem)
+        }
       }
-      // return {
-      //   state: 'reassign',
-      //   preAssignList: newPreAssignList
-      // }
+      const rePreAssignR = this.rePreAssign({
+        technicianList,
+        preAssignList: newPreAssignList,
+        rePreAssignOrderList: [...rePreAssignOrderList].sort((a, b) => a.orderDate.getTime() - b.orderDate.getTime())
+      })
+      return rePreAssignR
     }
+
+    // if (newPreAssignList) {
+    //   const r = this.assign({
+    //     technicianList,
+    //     orderList,
+    //     level: level + 1,
+    //     preAssignList: newPreAssignList,
+    //     workListObj,
+    //     doDelayProjectList: [...doDelayProjectList],
+    //     historyPreAssignList,
+    //     historyItems
+    //   })
+    //   if (r.state == 'complete') {
+    //     r.complete = true
+    //     return r
+    //   }
+    //   // return {
+    //   //   state: 'reassign',
+    //   //   preAssignList: newPreAssignList
+    //   // }
+    // }
     // preAssignList.push(assignItem)
-    const newnewnewPreAssignList = [...preAssignList]
-    newnewnewPreAssignList.push(assignItem)
-    historyItems[level] = assignItem
-    return { state: 'complete', preAssignList: newnewnewPreAssignList }
+    if (originalTimeStart) {
+      assignItem.originalTimeStart = originalTimeStart
+    }
+    const preAssignListR = [...preAssignList]
+    preAssignListR.push(assignItem)
+    return preAssignListR
   },
   getDelayTime({ item, subTime, minorTime }) {
     let typeList = []
@@ -971,20 +800,33 @@ window.algorithm = {
     item.duration = firstMatchItem.duration
     return item
   },
-  hasExchangeProject({ historyItems, level, orderItem, preAssignList, assignItem, TechnicianTimeItem }) {
+  hasExchangeProject({ technicianList, orderItem, preAssignList, assignItem, TechnicianTimeItem }) {
     // 循环查找是否有先来先做的项目
     let reAssignItem = null // 重排的项目
     let changeItem = assignItem // 被替换的项目
     const newPreAssignList = []
     let findItem = false
+    const exchangeList = []
+    const lastTimeObj = {}
+    let lastEndTimeAssign = new Date(0)
+    const lastItem = preAssignList
+      .filter((p) => p.technicianID == assignItem.technicianID && p.timeEnd <= assignItem.timeStart)
+      .sort((a, b) => b.timeEnd - a.timeEnd)[0]
+    if (lastItem) {
+      lastEndTimeAssign = lastItem.timeEnd
+    }
     for (let p of preAssignList) {
+      const lastEndTimeP = lastTimeObj[p.technicianID] || new Date(0)
+      const pToaTimeStart = new Date(Math.max(lastEndTimeAssign, this.getDateNow(), p.earliestOrderTime))
+      const aTopTimeStart = new Date(Math.max(lastEndTimeP, this.getDateNow(), assignItem.earliestOrderTime))
       // 如果已排的项目有开始时间晚于当前项目并且订单时间早于当前项目
       if (
-        !findItem &&
+        // !findItem &&
         !p.isAdjust &&
         // p.projectItem.project.id == assignItem.projectID &&
-        p.timeStart > assignItem.timeStart &&
-        p.earliestOrderTime < assignItem.earliestOrderTime
+        p.timeStart > pToaTimeStart &&
+        p.earliestOrderTime < assignItem.earliestOrderTime &&
+        p.preorderTime < assignItem.preorderTime // 防止第二个或者更后面的项目被无限拖后
       ) {
         // 先来先做，如果技师能做的话
         const result = this.findExchangeProjectItem({
@@ -996,15 +838,22 @@ window.algorithm = {
 
         if (result) {
           reAssignItem = result
+          exchangeList.push(
+            this.clone({
+              changeItem,
+              reAssignItem,
+              p
+            })
+          )
           findItem = true
         }
       }
       // 如果已排的项目有开始时间早于当前项目并且订单时间晚于当前项目
       if (
-        !findItem &&
+        // !findItem &&
         !p.isAdjust &&
         // p.projectItem.project.id == assignItem.projectID &&
-        p.timeStart < assignItem.timeStart &&
+        aTopTimeStart < assignItem.timeStart &&
         p.earliestOrderTime > assignItem.earliestOrderTime &&
         p.preorderTime > assignItem.preorderTime // 防止第二个或者更后面的项目被无限拖后
       ) {
@@ -1020,12 +869,19 @@ window.algorithm = {
           // debugger
           reAssignItem = result
           changeItem = p
+          exchangeList.push(
+            this.clone({
+              changeItem,
+              reAssignItem,
+              p
+            })
+          )
           findItem = true
         }
       }
       // 寻找派对订单看看能不能交换项目（项目耗时短的排在前面）
       if (
-        !findItem &&
+        // !findItem &&
         !p.isAdjust &&
         // p.projectItem.project.id == assignItem.projectID &&
         p.earliestOrderTime.getTime() == assignItem.earliestOrderTime.getTime()
@@ -1042,6 +898,13 @@ window.algorithm = {
           if (result) {
             reAssignItem = result
             changeItem = assignItem
+            exchangeList.push(
+              this.clone({
+                changeItem,
+                reAssignItem,
+                p
+              })
+            )
             findItem = true
           }
         } else if (p.timeStart < assignItem.timeStart) {
@@ -1054,6 +917,13 @@ window.algorithm = {
           if (result) {
             reAssignItem = result
             changeItem = p
+            exchangeList.push(
+              this.clone({
+                changeItem,
+                reAssignItem,
+                p
+              })
+            )
             findItem = true
           }
         }
@@ -1062,11 +932,21 @@ window.algorithm = {
       if (!findItem || orderItem.id == p.orderID) {
         newPreAssignList.push(p)
       }
+      lastTimeObj[p.technicianID] = p.timeEnd
     }
 
-    if (reAssignItem) {
+    if (exchangeList.length > 0) {
+      exchangeList.sort((a, b) => {
+        if (a.changeItem.earliestOrderTime.getTime() == b.changeItem.earliestOrderTime.getTime()) {
+          return a.reAssignItem.earliestOrderTime - b.reAssignItem.earliestOrderTime
+        }
+        return a.changeItem.earliestOrderTime.getTime() - b.changeItem.earliestOrderTime.getTime()
+      })
+      const exchangeItem = exchangeList[0]
+      changeItem = exchangeItem.changeItem
+      reAssignItem = exchangeItem.reAssignItem
       let lastTime = new Date(0)
-      for (let newItem of newPreAssignList) {
+      for (let newItem of preAssignList) {
         if (
           newItem.technicianID == changeItem.technicianID &&
           newItem.timeEnd <= changeItem.timeStart &&
@@ -1075,99 +955,56 @@ window.algorithm = {
           lastTime = newItem.timeEnd
         }
       }
-
-      reAssignItem.timeStart = new Date(Math.max(lastTime, reAssignItem.earliestOrderTime))
-      reAssignItem.timeEnd = new Date(reAssignItem.timeStart.getTime() + reAssignItem.duration * 60 * 1000)
-
-      const newnewPreAssignList = this.hasExchangeProject({
-        orderItem,
-        preAssignList: newPreAssignList,
-        assignItem: reAssignItem,
-        TechnicianTimeItem,
-        historyItems,
-        level
-      })
-      if (newnewPreAssignList) {
-        return newnewPreAssignList
+      if (reAssignItem.orderName == '1120') {
+        // debugger
       }
-      if (this.judgeWorkingTableLimit({ item: reAssignItem, preAssignList: newPreAssignList })) {
-        historyItems[level] = reAssignItem
-        newPreAssignList.push(reAssignItem)
-        return newPreAssignList
+      reAssignItem.timeStart = new Date(Math.max(this.getDateNow(), lastTime, reAssignItem.earliestOrderTime))
+      reAssignItem.timeEnd = new Date(reAssignItem.timeStart.getTime() + reAssignItem.duration * 60 * 1000)
+      // 重排
+      const newPreAssignListR = []
+      const rePreAssignList = []
+      const rePreAssignOrderList = new Set()
+      const nextItemList = preAssignList.filter(
+        (x) =>
+          x.technician &&
+          !x.isAdjust &&
+          ((x.technician.id == changeItem.technician.id && changeItem.timeStart <= x.timeStart) ||
+            (x.technician.id == exchangeItem.p.technician.id && exchangeItem.p.timeStart <= x.timeStart))
+      )
+      for (let item of preAssignList) {
+        const isfind = nextItemList.find(
+          (x) => !item.isAdjust && item.orderID == x.orderID && item.timeStart >= x.timeStart
+        )
+        if (isfind) {
+          rePreAssignList.push(item)
+          rePreAssignOrderList.add(item.orderItem)
+        } else {
+          newPreAssignListR.push(item)
+        }
+      }
+
+      // const newnewPreAssignList = this.hasExchangeProject({
+      //   orderItem,
+      //   preAssignList: newPreAssignList,
+      //   assignItem: reAssignItem,
+      //   TechnicianTimeItem
+      // })
+      // if (newnewPreAssignList) {
+      //   return newnewPreAssignList
+      // }
+      if (this.judgeWorkingTableLimit({ item: reAssignItem, preAssignList: newPreAssignListR })) {
+        newPreAssignListR.push(reAssignItem)
+        const r = this.rePreAssign({
+          technicianList,
+          preAssignList: newPreAssignListR,
+          rePreAssignList,
+          rePreAssignOrderList: [...rePreAssignOrderList].sort((a, b) => a.orderDate.getTime() - b.orderDate.getTime())
+        })
+        return r
       }
       return false
     }
     return false
-  },
-  getDoProjectJumpList({ prevProjectEndTime, orderItem, projectQueueItem, technicianAssignList, preAssignList }) {
-    // const mustDoneAdvanceTime = parseInt(localStorage.mustDoneAdvanceTime)
-    const trueOrderTime = new Date(Math.max(prevProjectEndTime, orderItem.preorderTime, this.getDateNow()))
-    const earliestOrderTime = new Date(Math.max(prevProjectEndTime, orderItem.preorderTime))
-    const list = technicianAssignList.filter(
-      (item) => !item.isAdjust && !item.projectItem.project.do && item.timeEnd > trueOrderTime
-    )
-    const DoProjectJumpList = []
-    list.forEach((item) => {
-      const newPreAssignList = []
-      const doDelayProjectList = [{ orderID: item.orderID, projectID: item.projectID }]
-      let timeStart = new Date(0)
-      let lastTimeRelative = new Date(0) // 排除小项的上个项目完成时间，用来排序
-      let findItem = false
-      for (let assignItem of preAssignList) {
-        if (assignItem == item) {
-          findItem = true
-        }
-        if (
-          !findItem &&
-          assignItem.technicianID == projectQueueItem.technicianItem.technician.id &&
-          assignItem.timeEnd > timeStart
-        ) {
-          timeStart = assignItem.timeEnd
-        }
-        if (
-          !findItem &&
-          assignItem.technicianID == projectQueueItem.technicianItem.technician.id &&
-          assignItem.timeEnd > lastTimeRelative &&
-          (!assignItem.projectItem || assignItem.projectItem.kind.orderRule != '由后到前')
-        ) {
-          lastTimeRelative = assignItem.timeEnd
-        }
-
-        if (!findItem || orderItem.id == assignItem.orderID) {
-          newPreAssignList.push(assignItem)
-        }
-      }
-      timeStart = new Date(Math.max(timeStart, trueOrderTime, this.getDateNow(), this.workBeginTime()))
-      const jumpAssignItem = {
-        earliestOrderTime,
-        date: this.getDateStart(),
-        state: 'unstart',
-        technicianName: projectQueueItem.technicianItem.technician.name,
-        orderName: orderItem.name,
-        projectItem: projectQueueItem.projectItem,
-        projectName: projectQueueItem.projectItem.project.name,
-        technicianID: projectQueueItem.technicianItem.technician.id,
-        technician: projectQueueItem.technicianItem.technician,
-        orderID: orderItem.id,
-        orderItem,
-        preorderTime: orderItem.preorderTime,
-        projectID: projectQueueItem.projectItem.project.id,
-        timeStart,
-        duration: projectQueueItem.duration,
-        timeEnd: new Date(timeStart.getTime() + projectQueueItem.duration * 60 * 1000)
-      }
-      newPreAssignList.push(jumpAssignItem)
-      DoProjectJumpList.push({
-        virtualTimeStart: new Date(Math.max(lastTimeRelative, trueOrderTime, this.getDateNow(), this.workBeginTime())),
-        doDelayProjectList,
-        lastTimeRelative,
-        ...projectQueueItem,
-        timeStart,
-        preAssignList: newPreAssignList,
-        jump: true
-      })
-    })
-    return DoProjectJumpList
   },
   getTechnicianTimeList({ prevProjectEndTime, orderItem, projectQueue, workListObj, preAssignList }) {
     if (projectQueue.length <= 0) {
@@ -1181,20 +1018,7 @@ window.algorithm = {
       const technicianAssignList = preAssignList
         .filter((item) => item.technicianID == projectQueueItem.technicianItem.technician.id)
         .sort((x, y) => x.timeStart - y.timeStart)
-      if (projectQueueItem.projectItem.project.do) {
-        // if (orderItem.name == '1502' && projectQueueItem.technicianItem.technician.name == 'David') {
-        //   // debugger
-        // }
-        // 必做项目
-        const DoProjectJumpList = this.getDoProjectJumpList({
-          projectQueueItem,
-          orderItem,
-          prevProjectEndTime,
-          technicianAssignList,
-          preAssignList
-        })
-        technicianTimeList.push(...DoProjectJumpList)
-      }
+
       let lastTime = timeStart
       let lastTimeRelative = new Date(0) // 排除小项的上个项目完成时间，用来排序
 
@@ -1307,11 +1131,13 @@ window.algorithm = {
         (p) =>
           p.projectItem &&
           p.projectItem.kind.id == item.projectItem.kind.id &&
+          p.technicianID != item.technicianID &&
           !(
             p.timeStart >= new Date(item.timeStart.getTime() + item.duration * 60 * 1000) || p.timeEnd <= item.timeStart
           )
       )
-      if (matchPreAssignList.length < limitNumber) {
+      const countSet = new Set(matchPreAssignList.map((m) => m.technicianID))
+      if (countSet.size < limitNumber) {
         return true
       } else {
         return false
@@ -1460,9 +1286,3 @@ window.algorithm = {
     })
   }
 }
-
-// export default {
-//   install(Vue, options) {
-//     init(Vue)
-//   }
-// }

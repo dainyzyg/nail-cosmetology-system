@@ -5,6 +5,9 @@
         el-menu-item(index='/order')
           i.el-icon-tickets
           span(slot='title') 订单管理
+        el-menu-item(index='/clockschedule')
+          i.el-icon-time
+          span(slot='title') 排钟表
         el-menu-item(index='/assign')
           i.el-icon-time
           span(slot='title') 排钟查看

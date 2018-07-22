@@ -133,7 +133,7 @@ export default {
       return this.historyPreAssignList[this.historyIndex]
     },
     historyLength() {
-      return Object.keys(this.assignObject.historyPreAssignList).length
+      return this.assignObject.historyLevel || Object.keys(this.assignObject.historyPreAssignList).length
     }
   },
   watch: {}

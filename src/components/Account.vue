@@ -53,9 +53,34 @@ export default {
     receiveFee(event, tipList) {
       this.tipList = tipList
     },
-    comfirm() {
-      console.log(this.data)
-      console.log(this.tipList)
+    async comfirm() {
+      const promiseList = [...new Set(this.data.map((m) => m.orderID))].map((orderID) => {
+        const tipObj = {}
+        this.tipList.forEach((tip) => {
+          if (tip.orderID == orderID) {
+            tipObj[tip.tabID] = tipObj[tip.tabID] || []
+            tipObj[tip.tabID].push(tip)
+          }
+        })
+        return this.setorderTip(orderID, tipObj)
+      })
+      await Promise.all(promiseList)
+      this.$emit('update:visible', false)
+      this.$emit('chectout')
+    },
+    async setorderTip(orderID, tipObj) {
+      await this.$IDB.executeTransaction(['order'], 'readwrite', (t) => {
+        const store = t.objectStore('order')
+        const request = store.get(orderID)
+        request.onsuccess = (event) => {
+          const order = event.target.result
+          order.tipObj = order.tipObj || {}
+          for (let i in tipObj) {
+            order.tipObj[i] = tipObj[i]
+          }
+          store.put(order)
+        }
+      })
     },
     cancel() {
       this.$emit('update:visible', false)
