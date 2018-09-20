@@ -16,7 +16,7 @@
     "url": "git://github.com/dainyzyg/nail-cosmetology-system.git"
   },
   "dependencies": {
-    "element-ui": "^2.1.0",
+    "element-ui": "^2.4.7",
     "socket.io": "^2.1.0",
     "sortablejs": "^1.7.0",
     "vue": "^2.5.2",
@@ -75,5 +75,9 @@
     "node": ">= 6.0.0",
     "npm": ">= 3.0.0"
   },
-  "browserslist": ["> 1%", "last 2 versions", "not ie <= 8"]
+  "browserslist": [
+    "> 1%",
+    "last 2 versions",
+    "not ie <= 8"
+  ]
 }

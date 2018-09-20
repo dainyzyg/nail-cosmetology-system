@@ -12,6 +12,14 @@ Vue.use(indexedDBPlugin)
 // Vue.use(algorithm)
 window.algorithm.init(Vue)
 Vue.use(ElementUI)
+
+Vue.config.errorHandler = function(err, vm, info) {
+  console.error(err)
+  ElementUI.MessageBox.alert(err.toString(), '错误提示', {
+    confirmButtonText: '确定',
+    type: 'error'
+  })
+}
 /* eslint-disable no-new */
 new Vue({
   el: '#app',

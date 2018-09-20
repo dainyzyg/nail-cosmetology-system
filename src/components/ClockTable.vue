@@ -159,7 +159,6 @@ export default {
       for (let i = this.beginHour; i < this.endHour; i++) {
         arr.push(i)
       }
-      console.log({ arr })
       return arr
     }
   },

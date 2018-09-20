@@ -9,12 +9,22 @@
           template(slot-scope='scope')
             el-switch(v-model="attendanceInfo[scope.row.id].isAttend" @change="saveAttendance(attendanceInfo[scope.row.id])")
         el-table-column(prop="name" label="姓名")
-        el-table-column(align="center" label="出勤时间" width="250")
+        el-table-column(align="center" label="午餐时间" width="150")
           template(slot-scope='scope')
-            el-time-picker( v-model="attendanceInfo[scope.row.id].startTime" @change="saveAttendance(attendanceInfo[scope.row.id])")
-        el-table-column(align="center" label="下班时间" width="250")
+            el-time-select(style="width:120px" :picker-options="pickerOpions" v-model="attendanceInfo[scope.row.id].lunchTime" @change="saveAttendance(attendanceInfo[scope.row.id])")
+        el-table-column(align="center" label="午餐时长" width="160")
           template(slot-scope='scope')
-            el-time-picker( v-model="attendanceInfo[scope.row.id].endTime" @change="saveAttendance(attendanceInfo[scope.row.id])")
+            //- el-input-number(style="width:130px" v-model="attendanceInfo[scope.row.id].lunchTimeDuration")
+            el-select(style="width:130px" v-model="attendanceInfo[scope.row.id].lunchTimeDuration" @change="saveAttendance(attendanceInfo[scope.row.id])")
+              el-option(:label="15" :value="15")
+              el-option(:label="30" :value="30")
+              el-option(:label="45" :value="45")
+        el-table-column(align="center" label="出勤时间" width="150")
+          template(slot-scope='scope')
+            el-time-select(style="width:120px" :picker-options="getStartPickerOpions(attendanceInfo[scope.row.id].endTime)" v-model="attendanceInfo[scope.row.id].startTime" @change="saveAttendance(attendanceInfo[scope.row.id])")
+        el-table-column(align="center" label="下班时间" width="150")
+          template(slot-scope='scope')
+            el-time-select(style="width:120px" :picker-options="getEndPickerOpions(attendanceInfo[scope.row.id].startTime)" v-model="attendanceInfo[scope.row.id].endTime" @change="saveAttendance(attendanceInfo[scope.row.id])")
 </template>
 <script>
 export default {
@@ -22,7 +32,18 @@ export default {
     return {
       attendanceInfo: {},
       dataTime: this.$algorithm.getDateNow(),
-      tableData: []
+      tableData: [],
+      pickerOpions: {
+        start: this.$algorithm
+          .workBeginTime()
+          .toLocaleTimeString('en-GB')
+          .replace(/:00$/, ''),
+        step: '00:15',
+        end: this.$algorithm
+          .workEndTime()
+          .toLocaleTimeString('en-GB')
+          .replace(/:00$/, '')
+      }
     }
   },
   async created() {
@@ -30,12 +51,24 @@ export default {
     this.getData()
   },
   methods: {
+    getEndPickerOpions(startTime) {
+      return {
+        minTime: startTime,
+        ...this.pickerOpions
+      }
+    },
+    getStartPickerOpions(endTime) {
+      return {
+        maxTime: endTime,
+        ...this.pickerOpions
+      }
+    },
     async getAttendanceInfo() {
       const attendanceInfo = {}
-      await this.$IDB.executeTransaction('attendance', 'readonly', t => {
+      await this.$IDB.executeTransaction('attendance', 'readonly', (t) => {
         const store = t.objectStore('attendance')
         const request = store.index('date').openCursor(IDBKeyRange.only(this.dateBegin))
-        request.onsuccess = event => {
+        request.onsuccess = (event) => {
           const cursor = event.target.result
           if (cursor) {
             attendanceInfo[cursor.value.id] = cursor.value
@@ -56,17 +89,25 @@ export default {
     },
     async getData() {
       this.tableData = []
-      await this.$IDB.executeTransaction('technician', 'readonly', t => {
+      await this.$IDB.executeTransaction('technician', 'readonly', (t) => {
         const store = t.objectStore('technician')
         const request = store.openCursor()
-        request.onsuccess = event => {
+        request.onsuccess = (event) => {
           const cursor = event.target.result
           if (cursor) {
             this.tableData.push(cursor.value)
             if (!this.attendanceInfo[cursor.value.id]) {
               this.$set(this.attendanceInfo, cursor.value.id, {
-                startTime: this.workBeginTime,
-                endTime: this.workEndTime,
+                lunchTime: '12:00',
+                lunchTimeDuration: 30,
+                startTime: this.$algorithm
+                  .workBeginTime()
+                  .toLocaleTimeString('en-GB')
+                  .replace(/:00$/, ''),
+                endTime: this.$algorithm
+                  .workEndTime()
+                  .toLocaleTimeString('en-GB')
+                  .replace(/:00$/, ''),
                 isAttend: false,
                 id: cursor.value.id,
                 date: this.dateBegin

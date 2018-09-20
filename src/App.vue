@@ -37,7 +37,10 @@
 
 <script>
 export default {
-  name: 'App'
+  name: 'App',
+  errorCaptured() {
+    console.log('errorCaptured')
+  }
 }
 </script>
 
