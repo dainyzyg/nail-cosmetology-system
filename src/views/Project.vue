@@ -1,6 +1,6 @@
 <template lang="pug">
   .page
-    KindPanel(v-for="item in kindList" :kind="item" :key="item.id")
+    KindPanel(v-for="item in kindList" :kind="item" :workingTableList="workingTableList" :key="item.id")
 </template>
 <script>
 import KindPanel from '@/components/KindPanel'
@@ -11,7 +11,8 @@ export default {
   },
   data() {
     return {
-      kindList: []
+      kindList: [],
+      workingTableList: []
     }
   },
   created() {
@@ -20,14 +21,24 @@ export default {
   methods: {
     async getData() {
       const kindList = []
-      await this.$IDB.executeTransaction('kind', 'readonly', t => {
+      await this.$IDB.executeTransaction('kind', 'readonly', (t) => {
         const store = t.objectStore('kind')
         const request = store.openCursor()
-        request.onsuccess = event => {
+        request.onsuccess = (event) => {
           const cursor = event.target.result
           if (cursor) {
             kindList.push(cursor.value)
             cursor.continue()
+          }
+        }
+      })
+      await this.$IDB.executeTransaction('workingTable', 'readonly', (t) => {
+        const store = t.objectStore('workingTable')
+        const request = store.getAll()
+        request.onsuccess = (event) => {
+          const result = event.target.result
+          if (result) {
+            this.workingTableList = result
           }
         }
       })

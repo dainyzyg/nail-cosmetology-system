@@ -7,93 +7,80 @@
           .tech-line-name {{i.name}}
           .tech-line-time {{i.lastClock.timeStr}}
     .panel.assign_list
-      .panel-title 分配列表
+      .panel-title 预分配
       .panet-content
-        .assign-line(v-for="i in assignList")
-          el-popover(placement="right" width="200")
-            el-button(size="medium" type="text" @click="popVisible = false") 取消
-            el-button(type="primary" size="medium" @click="popVisible = false") 固定
-            el-button(type="primary" size="medium" @click="popVisible = false") 开始
-            el-button.assign-btn(slot="reference" type="primary" size="medium" plain)
-              | {{i.techName+'->'+i.orderName}}
-              .divider
-              | {{i.number+'/'+i.count+' '+i.projectName+' '+i.timeStr}}
+        AssignItemPopover(v-for="i,index in data.preAssignList" :key="i.id" :assignItem="i" :index="index")
+    .panel.assign_list
+      .panel-title
+        | 已分配
+        i.el-icon-circle-plus-outline.add-assign-item(@click="assignVisible=true")
+      .panet-content
+        AssignItemPopover(v-for="i,index in data.assignList" :key="i.id" :assignItem="i" :index="index")
     .panel.clock-schedule
-      .panel-title 排钟表
+      .panel-title
+        | 排钟表
+        el-time-picker.time-now(@change="dateTimeNowChange" v-model="dateTimeNow" size="medium")
+        el-button.clear-btn(@click="clearScheduleData" type="danger" size="mini") 清空数据
       .panet-content
         .schedule-line(v-for="i in timeList")
           .schedule-line-time {{i.time}}
-          .schedule-line-order(v-for="j in 4" @click="selectOrder(i.time+'-'+j)")
+          .schedule-line-order(v-for="j in i.orderCount" @click="selectOrder(i.time+'-'+j)")
             el-button.schedule-btn(v-if="positionObj[i.time+'-'+j]" slot="reference" :type="getOrderType(positionObj[i.time+'-'+j])" size="medium" plain)
               .schedule-btn-line
                 .name {{positionObj[i.time+'-'+j].name}}
                 .number {{positionObj[i.time+'-'+j].number+'/'+positionObj[i.time+'-'+j].count}}
               .divider
               .schedule-btn-line {{positionObj[i.time+'-'+j].projects}}
+            .empty-schedule(v-if="!positionObj[i.time+'-'+j]" )
+              i.el-icon-circle-plus
+          .schedule-line-order(v-for="j in getOverFlowOrder(i)" @click="selectOrder(j.position)")
+            el-button.schedule-btn(slot="reference" :type="getOrderType(j)" size="medium" plain)
+              .schedule-btn-line
+                .name {{j.name}}
+                .number {{j.number+'/'+j.count}}
+              .divider
+              .schedule-btn-line {{j.projects}}
     OrderModal(:visible.sync="orderVisible" :title="title" :data="selectedOrder" @save="orderSave" @delete="deleteOrder")
+    AssignModal(:visible.sync="assignVisible")
 </template>
 <script>
 import OrderModal from '@/components/OrderModal'
+import AssignModal from '@/components/AssignModal'
+import AssignItemPopover from '@/components/AssignItemPopover'
 
 export default {
   components: {
-    OrderModal
+    AssignModal,
+    OrderModal,
+    AssignItemPopover
   },
   data() {
-    const data = {
+    return {
+      dateTimeNow: this.$algorithm.getDateNow(),
       selectedOrder: { orderInfo: [] },
       orderVisible: false,
+      assignVisible: false,
       workBeginTime: this.$algorithm.workBeginTime(),
       workEndTime: this.$algorithm.workEndTime(),
       dateStart: this.$algorithm.getDateStart(),
       intervals: 15,
-      timeList: [],
       title: '',
       projectDuration: 45,
-      orderObj: {},
-      positionObj: {},
-      technicianList: [],
-      assignList: []
+      data: this.$algorithm.data
     }
-    this.setTimeList(data)
-    console.log('data')
-    return data
   },
-  errorCaptured() {
-    console.log('errorCaptured')
-  },
-  async created() {
-    this.getTechnicianList()
-  },
+  async created() {},
   methods: {
-    async getTechnicianList() {
-      const attendanceInfo = {}
-      const technicianList = []
-      await window.IDB.executeTransaction(['attendance', 'technician'], 'readonly', (t) => {
-        const store = t.objectStore('attendance')
-        const request = store.index('date').openCursor(IDBKeyRange.only(this.dateStart))
-        request.onsuccess = (event) => {
-          const cursor = event.target.result
-          if (cursor) {
-            if (cursor.value.isAttend) {
-              attendanceInfo[cursor.value.id] = cursor.value
-              const getTechnicianRequest = t.objectStore('technician').get(cursor.value.id)
-              getTechnicianRequest.onsuccess = (e) => {
-                if (e.target.result) {
-                  e.target.result.attendanceInfo = cursor.value
-                  e.target.result.lastClock = {
-                    time: this.workBeginTime,
-                    timeStr: this.workBeginTime.toLocaleTimeString('en-GB').replace(/:00$/, '')
-                  }
-                  technicianList.push(e.target.result)
-                }
-              }
-            }
-            cursor.continue()
-          }
-        }
-      })
-      this.technicianList = technicianList.sort((a, b) => a.index - b.index)
+    dateTimeNowChange(val) {
+      localStorage.dateTimeNow = new Date(2018, 1, 26, val.getHours(), val.getMinutes(), val.getSeconds()).toISOString()
+      this.assign()
+    },
+    async getSchedule() {
+      const r = await this.$IDB.get('schedule', this.dateStart)
+      if (r) {
+        this.positionObj = r.positionObj
+        this.orderObj = r.orderObj
+      }
     },
     getOrderType(order) {
       return order.isArrive ? 'success' : ''
@@ -101,9 +88,13 @@ export default {
     getProjects(order) {
       return order.orderInfo.map((x) => x.project.name).join('|')
     },
-    orderSave() {
+    orderSave(temp) {
+      let oldPositions = []
       if (this.selectedOrder.id) {
+        oldPositions = [...this.selectedOrder.timePositions]
         this.clearOrder()
+      } else {
+        this.selectedOrder.isfree = true
       }
       const count = this.selectedOrder.orderInfo.length
       const hour = parseInt(this.title.split('-')[0].split(':')[0])
@@ -112,9 +103,11 @@ export default {
       const timePositions = [
         {
           time: timeFirst,
+          timeStr: timeFirst.toLocaleTimeString('en-GB').replace(/:00$/, ''),
           position: this.title,
           number: 1,
-          count
+          count,
+          index: parseInt(this.title.split('-')[1])
         }
       ]
 
@@ -124,7 +117,11 @@ export default {
         let findPosition = false
         let index = 1
         while (!findPosition) {
-          if (index > 4) {
+          let timeItem = this.timeList.find((x) => x.time == time.toLocaleTimeString('en-GB').replace(/:00$/, ''))
+          if (!timeItem) {
+            throw new Error('可用空间不足，无法分配项目！')
+          }
+          if (index > timeItem.orderCount) {
             time = new Date(time.getTime() + this.intervals * 60 * 1000)
             index = 1
           }
@@ -138,9 +135,11 @@ export default {
             findPosition = true
             timePositions.push({
               time,
+              timeStr: time.toLocaleTimeString('en-GB').replace(/:00$/, ''),
               position,
               number: i + 1,
-              count
+              count,
+              index
             })
           }
         }
@@ -158,60 +157,136 @@ export default {
           projects,
           ...i
         }
+        if (i.index > this.positionObj.maxIndex) {
+          this.positionObj.maxIndex = i.index
+        }
       })
       this.selectedOrder.timePositions = timePositions
       this.orderObj[this.selectedOrder.id] = this.selectedOrder
+      this.judgeMove(oldPositions)
       this.orderVisible = false
-      this.assign()
+
+      if (temp != 'temp') {
+        this.assign()
+        this.saveDB()
+      }
     },
     clearOrder() {
       this.title = this.selectedOrder.timePositions[0].position
       this.selectedOrder.timePositions.forEach((x) => {
         delete this.positionObj[x.position]
       })
-      this.assign()
+      // this.assign()
     },
     deleteOrder() {
+      const oldPositions = [...this.selectedOrder.timePositions]
       this.selectedOrder.timePositions.forEach((x) => {
         delete this.positionObj[x.position]
       })
       delete this.orderObj[this.selectedOrder.id]
       this.selectedOrder = { orderInfo: [] }
+      this.judgeMove(oldPositions)
+      console.log(this.positionObj)
       this.orderVisible = false
       this.assign()
+      this.saveDB()
+    },
+    saveDB() {
+      this.$algorithm.saveScheduleData()
+    },
+    async clearScheduleData() {
+      const r = await this.$confirm('此操作将清空所有订单数据, 是否继续?', '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      })
+      if (r != 'confirm') return
+      await window.IDB.delete('schedule', this.dateStart)
+      this.$algorithm.initData()
+    },
+    judgeMove(oldPositions) {
+      oldPositions.forEach((x) => {
+        if (!this.positionObj[x.position]) {
+          this.MoveLeft(x)
+        }
+      })
+    },
+    MoveLeft(position) {
+      // 取当前行该位置后的所有项目Object.keys().filter.sort，按顺序重新设置序号，再判断最后一个空位是否由满变空
+      // 如果由满变空 取后面的项目依次判断能否上移，Object.keys().filter.sort
+      // 然后再嵌套执行this.MoveLeft(x)
+      const timeItem = this.timeList.find((x) => x.time == position.timeStr)
+      if (!timeItem) return
+      const lastPosition = `${position.timeStr}-${timeItem.orderCount}`
+      let lastPositionItem = null
+      if (position.position == lastPosition) {
+        lastPositionItem = position
+      }
+      lastPositionItem = lastPositionItem || this.positionObj[lastPosition]
+      const moveList = Object.keys(this.positionObj)
+        .filter((x) => this.positionObj[x].timeStr == position.timeStr && this.positionObj[x].index > position.index)
+        .sort((a, b) => this.positionObj[a].index - this.positionObj[b].index)
+        .map((x) => this.positionObj[x])
+      for (let i = position.index; i <= timeItem.orderCount; i++) {
+        let positionItem = moveList.shift()
+        if (!positionItem) break
+        let oldPosition = positionItem.position
+        positionItem.position = `${positionItem.timeStr}-${i}`
+        positionItem.index = i
+        this.positionObj[positionItem.position] = positionItem
+        delete this.positionObj[oldPosition]
+        // set timePositions
+        let timePositionItem = this.orderObj[positionItem.orderID].timePositions.find((x) => x.position == oldPosition)
+        if (timePositionItem) {
+          timePositionItem.position = positionItem.position
+          timePositionItem.index = positionItem.index
+        }
+      }
+      if (lastPositionItem && !this.positionObj[lastPosition]) {
+        this.moveUp(lastPositionItem)
+      }
+    },
+    moveUp(position) {
+      console.log('moveUp')
+      console.log(position)
+      const moveList = Object.keys(this.positionObj)
+        .filter((x) => {
+          let result = false
+          const positionItem = this.positionObj[x]
+          if (positionItem.timeStr > position.timeStr && positionItem.number > 1) {
+            let prevPositionItem = this.orderObj[positionItem.orderID].timePositions[positionItem.number - 2]
+            if (position.time - prevPositionItem.time >= this.projectDuration * 60 * 1000) {
+              result = true
+            }
+          }
+          return result
+        })
+        .sort((a, b) => {
+          let pa = this.positionObj[a]
+          let pb = this.positionObj[b]
+          if (pa.time.getTime() == pb.time.getTime()) {
+            return pa.index - pb.index
+          }
+          return pa.time - pb.time
+        })
+        .map((x) => this.positionObj[x])
+      if (moveList.length > 0) {
+        let positionItem = moveList[0]
+        this.selectedOrder = this.orderObj[positionItem.orderID]
+        this.title = this.orderObj[positionItem.orderID].timePositions[0].position
+        this.orderSave('temp')
+      }
+    },
+    getOverFlowOrder(timeItem) {
+      // 根据maxIndex 依次寻找溢出的项目
+      // 或者用Object.keys()也可以一试
+      return Object.keys(this.positionObj)
+        .filter((x) => this.positionObj[x].timeStr == timeItem.time && this.positionObj[x].index > timeItem.orderCount)
+        .sort((a, b) => this.positionObj[a].index - this.positionObj[b].index)
+        .map((x) => this.positionObj[x])
     },
     assign() {
-      const orderList = this.getArriveOrder()
-      const assignList = []
-      orderList.forEach((x, i) => {
-        assignList.push({
-          techName: this.technicianList[i].name,
-          orderName: x.name,
-          number: 1,
-          count: x.orderInfo.length,
-          projectName: x.orderInfo[0].project.name,
-          timeStr: '11:00'
-        })
-      })
-      this.assignList = assignList
-    },
-    getArriveOrder() {
-      const orderList = []
-      Object.keys(this.orderObj).forEach((x) => {
-        let order = this.orderObj[x]
-        if (order.isArrive) {
-          orderList.push(order)
-        }
-      })
-      orderList.sort((x, y) => {
-        let pX = x.timePositions[0]
-        let pY = y.timePositions[0]
-        if (pX.time.getTime() == pY.time.getTime()) {
-          return pX.number - pY.number
-        }
-        return pX.time - pY.time
-      })
-      return orderList
+      this.$algorithm.assign()
     },
     selectOrder(id) {
       this.title = id
@@ -222,20 +297,25 @@ export default {
       }
 
       this.orderVisible = true
-    },
-    setTimeList(data) {
-      const workBeginTime = data.workBeginTime
-      const workEndTime = data.workEndTime
-      const timeList = []
-      let workTime = new Date(workBeginTime)
-      while (workTime < workEndTime) {
-        timeList.push({ time: workTime.toLocaleTimeString('en-GB').replace(/:00$/, '') })
-        workTime = new Date(workTime.getTime() + data.intervals * 60 * 1000)
-      }
-      data.timeList = timeList
     }
   },
-  computed: {},
+  computed: {
+    orderObj() {
+      return this.data.orderObj
+    },
+    timeList() {
+      return this.data.timeList
+    },
+    positionObj() {
+      return this.data.positionObj
+    },
+    technicianList() {
+      return this.data.technicianList
+    },
+    assignList() {
+      return this.data.assignList
+    }
+  },
   watch: {}
 }
 </script>
@@ -257,6 +337,13 @@ export default {
   border-radius: 4px;
   border: 2px solid #ebeef5;
 }
+.add-assign-item {
+  position: absolute;
+  right: 4px;
+  font-size: 26px;
+  font-weight: bolder;
+  cursor: pointer;
+}
 .panel:last-child {
   margin-right: 15px;
 }
@@ -266,8 +353,11 @@ export default {
 }
 .assign_list {
   flex: 0 0 180px;
+  padding: 0 2px;
+  overflow: hidden;
 }
 .panel-title {
+  position: relative;
   border-bottom: 2px solid #ebeef5;
   flex: 0 0 40px;
   display: flex;
@@ -278,14 +368,21 @@ export default {
 }
 .panet-content {
   flex: 1;
-  overflow-y: auto;
+  overflow: auto;
 }
-.schedule-line,
+.clock-schedule .panet-content {
+  padding-top: 4px;
+}
 .tech-line,
 .assign-line {
   display: flex;
   height: 50px;
   border-bottom: 2px solid #ebeef5;
+}
+.schedule-line {
+  display: flex;
+  width: auto;
+  height: 60px;
 }
 .tech-line,
 .assign-line {
@@ -307,19 +404,30 @@ export default {
   text-align: right;
 }
 .schedule-line-time {
+  background: white;
   display: flex;
   justify-content: center;
   align-items: center;
   flex: 0 0 60px;
+  /* border-bottom: 2px solid #ebeef5; */
+  position: sticky;
+  color: #409eff;
+  left: 0;
 }
 .schedule-line-order {
+  margin-left: 4px;
+
+  margin-bottom: 4px;
   overflow: hidden;
-  cursor: pointer;
+
   display: flex;
-  flex: 1;
-  border-left: 2px solid #ebeef5;
+  flex: 0 0 180px;
 }
-.schedule-line-order:hover {
+.empty-schedule i {
+  font-size: 30px;
+  color: #c0c4cc;
+}
+.empty-schedule:hover {
   background: #ebeef5;
 }
 .schedule-line-order:active {
@@ -336,6 +444,18 @@ export default {
   flex: 1;
   padding: 8px 6px;
   overflow: hidden;
+}
+.empty-schedule {
+  border: 1px solid #dcdfe6;
+  cursor: pointer;
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 8px 6px;
+  overflow: hidden;
+  font-size: 14px;
+  border-radius: 4px;
 }
 .schedule-btn-line {
   flex: 1;
@@ -357,5 +477,13 @@ export default {
 }
 .number {
   flex: 0 0 40px;
+}
+.time-now {
+  position: absolute;
+  right: 15px;
+}
+.clear-btn {
+  position: absolute;
+  left: 15px;
 }
 </style>

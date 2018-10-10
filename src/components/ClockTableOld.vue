@@ -7,12 +7,12 @@
           .mark-item(v-for="i in timeSlot") {{i}}
     .content(:style="{width:zoom}")
       .left
-        .line.name(v-for="i in assignList") {{i.techName}}
+        .line.name(v-for="i in assignObject.technicianList") {{i.name}}
       .right
         .clock-wrapper(style="width:100%")
-          //- .time-now(:style="{left:getTimeNow()}")
-          .line(v-for="i in assignList")
-            .project-item(v-for="pi in getWorkList(i.techID)" :style="getPIStyle(pi)")
+          .time-now(:style="{left:getTimeNow()}")
+          .line(v-for="i in assignObject.technicianList")
+            .project-item(@click="openInfo(pi)" v-for="pi in getWorkList(i.id)" :style="getPIStyle(pi)")
               .project-item-line(v-for="i in getOrderInfo(pi)") {{i}}
             .hour(v-for="i in timeSlot")
               .half-hour(v-for="i in 2")
@@ -22,7 +22,7 @@
 
 <script>
 export default {
-  props: ['data', 'dataTime'],
+  props: ['assignObject', 'openHistory', 'historyIndex'],
   created() {},
   data() {
     return {
@@ -42,16 +42,15 @@ export default {
       const endTime = this.workEndTime
       const duration = endTime - beginTime
       const start = this.dataTime - beginTime
-      const left = (start / duration) * 100
+      const left = start / duration * 100
       return `calc(${left}% - 1px)`
     },
     getWorkList(id) {
-      let list = []
-      try {
-        list = this.assignList.find((x) => x.techID == id).assignList
-      } finally {
+      let preAssignList = this.assignObject.preAssignList
+      if (this.openHistory) {
+        preAssignList = this.assignObject.historyPreAssignList[this.historyIndex]
       }
-      return list
+      return preAssignList.filter((x) => x.technicianID == id)
     },
     getTimeString(date) {
       const hours = date.getHours()
@@ -61,7 +60,7 @@ export default {
     getOrderInfo(pi) {
       const list = []
       const time = `${this.getTimeString(pi.timeStart)}-${this.getTimeString(pi.timeEnd)}`
-      list.push(`${pi.number}/${pi.count} ${pi.orderName}`)
+      list.push(`${pi.number || ''} ${pi.orderName}`)
       list.push(`${time}`)
       list.push(`${pi.projectName}`)
       return list
@@ -72,18 +71,18 @@ export default {
       const endTime = this.workEndTime
       const totalDuration = endTime - beginTime
       const start = pi.timeStart - beginTime
-      const left = (start / totalDuration) * 100
-      const width = (duration / totalDuration) * 100
+      const left = start / totalDuration * 100
+      const width = duration / totalDuration * 100
       let background = '#67c23a' // 绿
       if (pi.isAdjust) {
         background = '#909399' // 灰
       }
-      switch (pi.status) {
-        case 'start':
-          background = '#67c23a'
-          break
-        case 'end':
+      switch (pi.state) {
+        case 'starting':
           background = '#ffcc03'
+          break
+        case 'complete':
+          background = '#fe9403'
           break
         case 'checkout':
           background = '#fe9403'
@@ -102,30 +101,24 @@ export default {
         }
         return v
       })
+    },
+    openInfo(pi) {
+      const selectedOject = {
+        selectedInfo: this.getOrderInfo(pi).join('   '),
+        selectedItem: this.clone(pi)
+      }
+      this.$emit('project-click', selectedOject)
     }
   },
   computed: {
-    assignList() {
-      const m = new Map()
-      this.data.assignList.forEach((item) => {
-        if (m.has(item.techID)) {
-          m.get(item.techID).assignList.push(item)
-        } else {
-          m.set(item.techID, {
-            techID: item.techID,
-            techName: item.techName,
-            assignList: [item]
-          })
-        }
-      })
-      console.log([...m.values()])
-      return [...m.values()]
+    dataTime() {
+      return this.assignObject.dateNow
     },
     dateBegin() {
-      return new Date(this.dataTime.toDateString())
+      return new Date(this.assignObject.dateNow.toDateString())
     },
     beginHour() {
-      const day = this.dataTime.getDay()
+      const day = this.assignObject.dateNow.getDay()
       if (day > 0 && day < 6) {
         return parseInt(localStorage.workBeginTime)
       } else {
@@ -133,7 +126,7 @@ export default {
       }
     },
     endHour() {
-      const day = this.dataTime.getDay()
+      const day = this.assignObject.dateNow.getDay()
       if (day > 0 && day < 6) {
         return parseInt(localStorage.workEndTime)
       } else {
@@ -141,7 +134,7 @@ export default {
       }
     },
     workBeginTime() {
-      const day = this.dataTime.getDay()
+      const day = this.assignObject.dateNow.getDay()
       let time
       if (day > 0 && day < 6) {
         time = parseInt(localStorage.workBeginTime)
@@ -152,7 +145,7 @@ export default {
     },
 
     workEndTime() {
-      const day = this.dataTime.getDay()
+      const day = this.assignObject.dateNow.getDay()
       let time
       if (day > 0 && day < 6) {
         time = parseInt(localStorage.workEndTime)
@@ -167,9 +160,6 @@ export default {
         arr.push(i)
       }
       return arr
-    },
-    techList() {
-      return []
     }
   },
   watch: {}

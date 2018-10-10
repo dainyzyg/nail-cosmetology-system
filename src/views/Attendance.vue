@@ -31,7 +31,7 @@ export default {
   data() {
     return {
       attendanceInfo: {},
-      dataTime: this.$algorithm.getDateNow(),
+      dataTime: this.$algorithm.getDateStart(),
       tableData: [],
       pickerOpions: {
         start: this.$algorithm
@@ -82,6 +82,13 @@ export default {
     saveAttendance(info, id) {
       console.log(info)
       if (info.isAttend) {
+        // 计算午餐结束时间
+        const hour = parseInt(info.lunchTime.split(':')[0])
+        const minute = parseInt(info.lunchTime.split(':')[1])
+        const lunchTimeStart = new Date(this.dataTime.getTime() + (hour * 60 + minute) * 60 * 1000)
+        const lunchTimeEnd = new Date(lunchTimeStart.getTime() + info.lunchTimeDuration * 60 * 1000)
+        info.lunchTimeEnd = lunchTimeEnd.toLocaleTimeString('en-GB').replace(/:00$/, '')
+
         this.$IDB.put('attendance', info)
       } else {
         this.$IDB.delete('attendance', [info.id, info.date])
@@ -91,7 +98,7 @@ export default {
       this.tableData = []
       await this.$IDB.executeTransaction('technician', 'readonly', (t) => {
         const store = t.objectStore('technician')
-        const request = store.openCursor()
+        const request = store.index('index').openCursor()
         request.onsuccess = (event) => {
           const cursor = event.target.result
           if (cursor) {

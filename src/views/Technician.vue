@@ -5,23 +5,26 @@
       el-button(@click="add" icon="el-icon-circle-plus-outline" size="medium" type="primary") 添加
     .table-wraper
       el-table.table(:data="tableData" border height="calc(100vh - 66px)")
-        el-table-column(prop="name" label="姓名")
-        el-table-column(align="center" label="操作" width="250")
+        el-table-column(prop="name" label="姓名" width="300")
+        el-table-column(label="固定台")
+          template(slot-scope="scope")
+            el-tag(style="margin-right:10px;" v-if="i" :key="i" v-for="i in getFixedTableName(scope.row.fixedTableList)") {{i}}
+        el-table-column(align="center" label="操作" width="300")
           template(slot-scope='scope')
             el-button(@click='edit(scope.row)' size='small' type="primary") 编辑
             el-button(@click='skillSetting(scope.row)' size='small' type="primary") 技能设置
             el-button(@click='remove(scope.row.id)' size='small' type='danger') 删除
-    el-dialog(title='新增技师' :visible.sync='addVisible' style="overflow:hidden;")
+    el-dialog(title='技师信息' :visible.sync='addVisible' style="overflow:hidden;")
       el-form(:inline="true" label-width="80px")
         el-form-item(label='姓名')
-          el-input(auto-complete='off' v-model="formData.name")
+          el-input(auto-complete='off' v-model="formData.name" style="width:200px;")
         el-form-item(label='密码')
           el-input(auto-complete='off' v-model="formData.password")
+        el-form-item(label='固定台')
+          el-select(v-model="formData.fixedTableList" multiple placeholder="请选择")
+            el-option(v-for="item in workingTableList" :key="item.id" :label="item.type" :value="item.id")
         el-form-item(label='序号')
           el-input-number(auto-complete='off' v-model="formData.index")
-      //- el-tabs(type="border-card")
-      //-   el-tab-pane(:label="item.name" :key="item.id" v-for="item in kindList")
-      //-     ProjectSelect(:kind="item" :skills="skills")
       .dialog-footer(slot='footer')
         el-button(@click="addVisible=false") 取 消
         el-button(type='primary' @click="save") 确 定
@@ -42,24 +45,42 @@ export default {
       skillSettingVisible: false,
       skills: {},
       kindList: [],
-      formData: {},
+      formData: { fixedTableList: [] },
       addVisible: false,
-      tableData: []
+      tableData: [],
+      workingTableList: []
     }
   },
   created() {
+    this.getWorkingTable()
     this.getKindList()
     this.getData()
-    // this.$nextTick(() => {
-    //   this.setSort()
-    // })
   },
   methods: {
+    getFixedTableName(fixedTableList) {
+      return fixedTableList.map((x) => {
+        let item = this.workingTableList.find((y) => y.id == x)
+        if (item) return item.type
+        return ''
+      })
+    },
+    async getWorkingTable() {
+      await this.$IDB.executeTransaction('workingTable', 'readonly', (t) => {
+        const store = t.objectStore('workingTable')
+        const request = store.getAll()
+        request.onsuccess = (event) => {
+          const result = event.target.result
+          if (result) {
+            this.workingTableList = result
+          }
+        }
+      })
+    },
     async getKindList() {
-      await this.$IDB.executeTransaction(['kind'], 'readonly', t => {
+      await this.$IDB.executeTransaction(['kind'], 'readonly', (t) => {
         const store = t.objectStore('kind')
         const request = store.openCursor()
-        request.onsuccess = event => {
+        request.onsuccess = (event) => {
           const cursor = event.target.result
           if (cursor) {
             this.kindList.push(cursor.value)
@@ -70,12 +91,13 @@ export default {
     },
     async getData() {
       this.tableData = []
-      await this.$IDB.executeTransaction('technician', 'readonly', t => {
+      await this.$IDB.executeTransaction('technician', 'readonly', (t) => {
         const store = t.objectStore('technician')
         const request = store.index('index').openCursor()
-        request.onsuccess = event => {
+        request.onsuccess = (event) => {
           const cursor = event.target.result
           if (cursor) {
+            cursor.value.fixedTableList = cursor.value.fixedTableList || []
             this.tableData.push(cursor.value)
             cursor.continue()
           }
@@ -120,11 +142,17 @@ export default {
       this.addVisible = true
     },
     async remove(id) {
+      const r = await this.$confirm('此操作将永久删除该条记录, 是否继续?', '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      })
+      if (r != 'confirm') return
       await this.$IDB.delete('technician', id)
       this.getData()
     },
     add() {
-      this.formData = {}
+      this.formData = { fixedTableList: [] }
       this.skills = {}
       this.addVisible = true
     },

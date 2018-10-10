@@ -24,8 +24,11 @@
           i.el-icon-picture
           span(slot='title') 屏幕管理
         el-menu-item(index='/fee')
-          i.el-icon-setting
+          i.el-icon-goods
           span(slot='title') 小费设置
+        el-menu-item(index='/workingTable')
+          i.el-icon-menu
+          span(slot='title') 工作台设置
         el-menu-item(index='/setting')
           i.el-icon-setting
           span(slot='title') 参数设置
@@ -69,6 +72,7 @@ export default {
 }
 .nav-menu {
   flex: 0 0 145px;
+  overflow-y: auto;
   background-color: #304156;
 }
 </style>

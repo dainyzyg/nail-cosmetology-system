@@ -105,6 +105,13 @@ export default {
       }
     },
     addProject() {
+      if (this.data.orderInfo.find((x) => x.project.id == this.selectedProject.id)) {
+        this.$alert('无法添加重复的项目！', '提示', {
+          confirmButtonText: '确定',
+          type: 'warning'
+        })
+        return
+      }
       this.askResult = {}
       this.askAddList = this.additionList.filter((a) => a.ask && !this.selectedAdditions.find((s) => s.id == a.id))
       if (this.askAddList.length > 0) {

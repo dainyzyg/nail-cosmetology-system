@@ -12,6 +12,7 @@ import Screen from '@/views/Screen'
 import Fee from '@/views/Fee'
 import Server from '@/views/Server'
 import ClockSchedule from '@/views/ClockSchedule'
+import WorkingTable from '@/views/WorkingTable'
 
 Vue.use(Router)
 
@@ -28,6 +29,7 @@ export default new Router({
     { path: '/screen', component: Screen },
     { path: '/fee', component: Fee },
     { path: '/server', component: Server },
-    { path: '/clockschedule', component: ClockSchedule }
+    { path: '/clockschedule', component: ClockSchedule },
+    { path: '/workingTable', component: WorkingTable }
   ]
 })

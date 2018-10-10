@@ -5,18 +5,18 @@
       el-button(@click="add" icon="el-icon-circle-plus-outline" size="medium" type="primary") 添加
     .table-wraper
       el-table.table(:data="tableData" border height="calc(100vh - 66px)")
-        el-table-column(prop="percentage" label="百分比(%)" width="200")
-        el-table-column(label="描述" prop="description")
+        el-table-column(prop="type" label="台种类")
+        el-table-column(align="center" label="数量" prop="count" width="200")
         el-table-column(align="center" label="操作" width="200")
           template(slot-scope='scope')
             el-button(@click='edit(scope.row)' size='small' type="primary") 编辑
-            el-button(@click='remove(scope.row.percentage)' size='small' type='danger') 删除
+            el-button(@click='remove(scope.row.id)' size='small' type='danger') 删除
     el-dialog(title='新增' :visible.sync='addVisible' style="overflow:hidden;")
-      el-form(label-width="80px")
-        el-form-item(label='百分比(%)')
-          el-input-number(auto-complete='off' v-model="formData.percentage")
-        el-form-item(label='描述')
-          el-input(auto-complete='off' v-model="formData.description")
+      el-form(:model="formData" ref="formData" label-width="80px" style="width:260px" :rules="rules")
+        el-form-item(label='台种类' prop="type")
+          el-input(auto-complete='off' v-model="formData.type")
+        el-form-item(label='数量' prop="count")
+          el-input-number(auto-complete='off' v-model="formData.count")
       //- el-tabs(type="border-card")
       //-   el-tab-pane(:label="item.name" :key="item.id" v-for="item in kindList")
       //-     ProjectSelect(:kind="item" :skills="skills")
@@ -34,7 +34,14 @@ export default {
     return {
       formData: {},
       addVisible: false,
-      tableData: []
+      tableData: [],
+      rules: {
+        count: [
+          { required: true, message: '数量不能为空', trigger: 'blur' },
+          { min: 0, type: 'number', message: '数量不能小于0', trigger: 'blur' }
+        ],
+        type: [{ required: true, message: '台种类不能为空', trigger: 'blur' }]
+      }
     }
   },
   created() {
@@ -43,48 +50,39 @@ export default {
   methods: {
     async getData() {
       this.tableData = []
-      await this.$IDB.executeTransaction('feeInfo', 'readonly', t => {
-        const store = t.objectStore('feeInfo')
-        const request = store.openCursor()
-        request.onsuccess = event => {
-          const cursor = event.target.result
-          if (cursor) {
-            this.tableData.push(cursor.value)
-            cursor.continue()
+      await this.$IDB.executeTransaction('workingTable', 'readonly', (t) => {
+        const store = t.objectStore('workingTable')
+        const request = store.getAll()
+        request.onsuccess = (event) => {
+          const result = event.target.result
+          if (result) {
+            this.tableData = result
           }
         }
       })
     },
     async save() {
-      try {
-        if (!this.formData.percentage) {
-          this.$alert('请输入百分比！', '提示', {
-            confirmButtonText: '确定',
-            type: 'warning'
-          })
-          return
-        }
-        await this.$IDB.put('feeInfo', this.formData)
+      console.log(this.formData)
+      this.formData.id = this.formData.id || this.getNewID()
+      this.$refs['formData'].validate(async (valid) => {
+        if (!valid) return false
+        await this.$IDB.put('workingTable', this.formData)
         this.addVisible = false
         this.getData()
-      } catch (e) {
-        this.$alert(e.message, '错误提示', {
-          confirmButtonText: '确定',
-          type: 'error'
-        })
-      }
-    },
-    skillSetting(data) {
-      this.technician = data
-      this.technician.skillInfo = this.technician.skillInfo || {}
-      this.skillSettingVisible = true
+      })
     },
     async edit(data) {
       this.formData = JSON.parse(JSON.stringify(data))
       this.addVisible = true
     },
     async remove(id) {
-      await this.$IDB.delete('feeInfo', id)
+      const r = await this.$confirm('此操作将永久删除该条记录, 是否继续?', '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      })
+      if (r != 'confirm') return
+      await this.$IDB.delete('workingTable', id)
       this.getData()
     },
     add() {
