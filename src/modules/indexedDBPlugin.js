@@ -100,6 +100,18 @@ const IDB = {
       }
     })
   },
+  async getAll(osName) {
+    const store = await this.getObjectStore(osName)
+    return new Promise((resolve, reject) => {
+      const request = store.getAll()
+      request.onerror = (e) => {
+        reject(e)
+      }
+      request.onsuccess = (e) => {
+        resolve(e.target.result)
+      }
+    })
+  },
   async executeCursor(osName, index, query, cb) {
     const datalist = []
     const store = await this.getObjectStore(osName)

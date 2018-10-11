@@ -93,6 +93,7 @@ export default {
       } else {
         this.$IDB.delete('attendance', [info.id, info.date])
       }
+      this.$algorithm.initData()
     },
     async getData() {
       this.tableData = []

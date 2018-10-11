@@ -72,6 +72,8 @@ export default {
           orderRule: projectItem.kind.orderRule,
           projectName: projectItem.project.name,
           projectID: projectItem.project.id,
+          workingTableID: projectItem.project.workingTableID,
+          fixedTable: tech.fixedTableList && tech.fixedTableList.includes(projectItem.project.workingTableID),
           timeStartStr: this.$algorithm.getTimeStr(this.formData.timeStart),
           timeStart: this.getTime(this.formData.timeStart),
           timeEndStr: this.$algorithm.getTimeStr(this.formData.timeEnd),

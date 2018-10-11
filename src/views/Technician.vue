@@ -130,6 +130,7 @@ export default {
           type: 'error'
         })
       }
+      this.$algorithm.initData()
     },
     skillSetting(data) {
       this.technician = data
@@ -150,6 +151,7 @@ export default {
       if (r != 'confirm') return
       await this.$IDB.delete('technician', id)
       this.getData()
+      this.$algorithm.initData()
     },
     add() {
       this.formData = { fixedTableList: [] }

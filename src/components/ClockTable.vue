@@ -78,15 +78,22 @@ export default {
       if (pi.isAdjust) {
         background = '#909399' // 灰
       }
+
       switch (pi.status) {
+        case 'fix':
+          background = '#13c2c2'
+          break
         case 'start':
-          background = '#67c23a'
+          background = '#f5222d'
           break
         case 'end':
-          background = '#ffcc03'
+          background = '#fadb14'
           break
         case 'checkout':
           background = '#fe9403'
+          break
+        case 'waiting':
+          background = '#52c41a'
           break
       }
       return {
@@ -107,7 +114,7 @@ export default {
   computed: {
     assignList() {
       const m = new Map()
-      this.data.assignList.forEach((item) => {
+      this.data.assignList.concat(this.data.preAssignList).forEach((item) => {
         if (m.has(item.techID)) {
           m.get(item.techID).assignList.push(item)
         } else {

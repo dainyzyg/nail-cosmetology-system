@@ -9,6 +9,7 @@ window.algorithm = {
   timeDuration: 0,
   tempTechnicianList: [],
   tempPandAStandardTime: {},
+  workingTableList: [],
   data: {
     orderObj: {},
     positionObj: { maxIndex: 0 },
@@ -135,19 +136,37 @@ window.algorithm = {
     console.log('assignpProjects')
   },
   computingTechLastClock(technician) {
+    let lastClockStartTimeStr
     let lastClockTimeStr = technician.attendanceInfo.startTime
     let lastRelativeClockTimeStr = technician.attendanceInfo.startTime
-    this.data.assignList.forEach((x) => {
+    if (
+      technician.attendanceInfo.lunchTime <= lastClockTimeStr &&
+      technician.attendanceInfo.lunchTimeEnd > lastClockTimeStr
+    ) {
+      lastClockTimeStr = lastRelativeClockTimeStr = technician.attendanceInfo.lunchTimeEnd
+    }
+
+    this.data.assignList.concat(this.data.preAssignList).forEach((x) => {
       if (x.techID == technician.id && lastClockTimeStr < x.timeEndStr) {
         lastClockTimeStr = x.timeEndStr
+        lastClockStartTimeStr = x.timeStartStr
       }
       if (x.techID == technician.id && x.orderRule != '由后到前' && lastRelativeClockTimeStr < x.timeEndStr) {
         lastRelativeClockTimeStr = x.timeEndStr
       }
     })
+    let time = this.getTimeByStr(lastClockTimeStr)
+    if (lastClockStartTimeStr) {
+      if (
+        lastClockStartTimeStr <= technician.attendanceInfo.lunchTime &&
+        lastClockTimeStr > technician.attendanceInfo.lunchTime
+      ) {
+        time = new Date(time.getTime() + technician.attendanceInfo.lunchTimeDuration * 60 * 1000)
+      }
+    }
     technician.lastClock = {
-      timeStr: lastClockTimeStr,
-      time: this.getTimeByStr(lastClockTimeStr),
+      timeStr: this.getTimeStr(time),
+      time,
       relativeTime: this.getTimeByStr(lastRelativeClockTimeStr),
       relativeTimeStr: lastRelativeClockTimeStr
     }
@@ -178,6 +197,10 @@ window.algorithm = {
     })
     this.data.technicianList = technicianList.sort((a, b) => a.lastClock.relativeTime - b.lastClock.relativeTime)
     this.getClockSchedule()
+  },
+  async getWorkingTable() {
+    const r = await window.IDB.getAll('workingTable', this.getDateStart())
+    this.workingTableList = r || []
   },
   async getScheduleData() {
     const r = await window.IDB.get('schedule', this.getDateStart())
@@ -239,7 +262,7 @@ window.algorithm = {
       let relativeTimeStart = new Date(Math.max(this.getDateNow(), tech.lastClock.relativeTime))
       if (relativeTimeStart > relativeTimeStartAndDelay) break
       let matchProjectItem = this.matchProject({ tech, waitingProjectList })
-      if (matchProjectItem.projectItem) {
+      if (matchProjectItem) {
         technicianTimeList.push(matchProjectItem)
         let relativeTimeStartAndDelayThis = new Date(
           matchProjectItem.relativeTimeStart.getTime() + matchProjectItem.delayTime * 60 * 1000
@@ -297,7 +320,6 @@ window.algorithm = {
     }
 
     // 计算技师时调
-    let duration = this.getDuration(matchProjectItem)
 
     const item = {
       id: this.getNewID(),
@@ -310,23 +332,36 @@ window.algorithm = {
       orderRule: matchProjectItem.projectItem.kind.orderRule,
       projectName: matchProjectItem.projectItem.project.name,
       projectID: matchProjectItem.projectItem.project.id,
+      workingTableID: matchProjectItem.projectItem.project.workingTableID,
+      fixedTable:
+        matchProjectItem.tech.fixedTableList &&
+        matchProjectItem.tech.fixedTableList.includes(matchProjectItem.projectItem.project.workingTableID),
       timeStartStr: this.getTimeStr(matchProjectItem.timeStart),
       timeStart: matchProjectItem.timeStart,
-      timeEndStr: this.getTimeStr(new Date(matchProjectItem.timeStart.getTime() + duration * 60 * 1000)),
-      timeEnd: new Date(matchProjectItem.timeStart.getTime() + duration * 60 * 1000),
-      duration,
+      timeEndStr: this.getTimeStr(matchProjectItem.timeEnd),
+      timeEnd: matchProjectItem.timeEnd,
+      duration: matchProjectItem.duration,
       status: 'waiting'
     }
+
     this.data.preAssignList.push(item)
 
     // 更改技师的最后完成时间
     const tech = this.tempTechnicianList.find((x) => x.id == item.techID)
-    tech.lastClock.time = item.timeEnd
-    tech.lastClock.timeStr = item.timeEndStr
+    let time = item.timeEnd
     if (item.orderRule != '由后到前') {
       tech.lastClock.relativeTime = item.timeEnd
       tech.lastClock.relativeTimeStr = item.timeEndStr
     }
+    if (item.timeStartStr <= tech.attendanceInfo.lunchTime && item.timeEndStr > tech.attendanceInfo.lunchTime) {
+      time = new Date(time.getTime() + tech.attendanceInfo.lunchTimeDuration * 60 * 1000)
+      tech.lastClock.relativeTime = time
+      tech.lastClock.relativeTimeStr = this.getTimeStr(time)
+    }
+
+    tech.lastClock.time = time
+    tech.lastClock.timeStr = this.getTimeStr(time)
+
     // 更新排序
     this.tempTechnicianList.sort((a, b) => a.lastClock.relativeTime - b.lastClock.relativeTime)
   },
@@ -334,6 +369,7 @@ window.algorithm = {
     let timeStart = new Date(Math.max(this.getDateNow(), tech.lastClock.time))
     let relativeTimeStart = new Date(Math.max(this.getDateNow(), tech.lastClock.relativeTime))
     let matchProjectObj = { tech, timeStart, relativeTimeStart, delayTotal: 999999 } // projectID  projectPriorityTime delayTime type
+    const list = []
     waitingProjectList.forEach((projectItem) => {
       if (projectItem.technicians.length > 0) {
         let hasTech = projectItem.technicians.find((i) => i.id == tech.id)
@@ -343,6 +379,10 @@ window.algorithm = {
         matchProjectObj.projectPriorityTime = projectItem.projectPriorityTime
         matchProjectObj.delayTotal = 0
         matchProjectObj.type = 'major'
+        const wtObj = this.getWorkingTableTimeStartObj(matchProjectObj)
+        if (wtObj) {
+          list.push(wtObj)
+        }
       } else {
         if (tech.skillInfo[projectItem.project.id] && tech.skillInfo[projectItem.project.id].type) {
           let typeList = []
@@ -367,18 +407,82 @@ window.algorithm = {
               type = 'minor'
             }
             let delayTotal = delayTime + projectItem.projectPriorityTime
-            if (matchProjectObj.delayTotal > delayTotal) {
-              matchProjectObj.projectItem = projectItem
-              matchProjectObj.delayTime = delayTime
-              matchProjectObj.projectPriorityTime = projectItem.projectPriorityTime
-              matchProjectObj.delayTotal = projectItem.projectPriorityTime + delayTime
-              matchProjectObj.type = type
+            const matchItem = {
+              ...matchProjectObj,
+              projectItem,
+              delayTime,
+              projectPriorityTime: projectItem.projectPriorityTime,
+              delayTotal,
+              type
+            }
+            const wtObj = this.getWorkingTableTimeStartObj(matchItem)
+            if (wtObj) {
+              list.push(wtObj)
             }
           }
         }
       }
     })
-    return matchProjectObj
+    if (list.length > 0) {
+      return list.sort(
+        (a, b) => a.timeStart.getTime() + a.delayTotal * 60 * 1000 - b.timeStart.getTime() - b.delayTotal * 60 * 1000
+      )[0]
+    }
+    return false
+  },
+  getWorkingTableTimeStartObj({ tech, projectItem, timeStart, relativeTimeStart, delayTotal }) {
+    const rObj = { ...arguments[0] }
+
+    // 判断是否是午餐时间
+    const lunchTimeStart = this.getTimeByStr(tech.attendanceInfo.lunchTime)
+    const lunchTimeEnd = new Date(lunchTimeStart.getTime() + tech.attendanceInfo.lunchTimeDuration * 60 * 1000)
+    if (timeStart >= lunchTimeStart && timeStart < lunchTimeEnd) {
+      rObj.timeStart = lunchTimeEnd
+      return this.getWorkingTableTimeStartObj(rObj)
+    }
+
+    const duration = this.getDuration({ tech, projectItem })
+    rObj.duration = duration
+    const fixedTableList = tech.fixedTableList || []
+    let timeEnd = new Date(timeStart.getTime() + duration * 60 * 1000)
+    rObj.timeEnd = timeEnd
+    const workingTableID = projectItem.project.workingTableID
+    if (workingTableID && !fixedTableList.includes(workingTableID)) {
+      const workingTableItem = this.workingTableList.find((x) => x.id == workingTableID)
+      if (workingTableItem && workingTableItem.count > 0) {
+        let fixCount = this.data.technicianList.filter((x) => {
+          let fixedList = x.fixedTableList || []
+          return fixedList.includes(workingTableID)
+        }).length
+        let freeCount = workingTableItem.count - fixCount
+        if (freeCount <= 0) {
+          return false
+        }
+        const matchPreAssignList = this.data.assignList
+          .concat(this.data.preAssignList)
+          .filter(
+            (p) =>
+              p.workingTableID == workingTableID &&
+              p.technicianID != tech.id &&
+              !p.fixedTable &&
+              !(p.timeStart >= timeEnd || p.timeEnd <= timeStart)
+          )
+        const countSet = new Set(matchPreAssignList.map((m) => m.technicianID))
+        if (countSet.size >= freeCount) {
+          matchPreAssignList.sort((a, b) => a.timeEnd - b.timeEnd)
+          if (matchPreAssignList.length <= freeCount) {
+            rObj.timeStart = new Date(matchPreAssignList[0].timeEnd)
+          } else {
+            rObj.timeStart = new Date(matchPreAssignList[matchPreAssignList.length - freeCount].timeEnd)
+          }
+
+          rObj.relativeTimeStart = rObj.timeStart
+          rObj.timeEnd = new Date(rObj.timeStart.getTime() + duration * 60 * 1000)
+          return this.getWorkingTableTimeStartObj(rObj)
+        }
+      }
+    }
+    return rObj
   },
   getArriveOrder() {
     const orderList = []
@@ -502,18 +606,30 @@ window.algorithm = {
   setTechLastClock(assignItem) {
     const tech = this.data.technicianList.find((x) => x.id == assignItem.techID)
     if (!tech) return
-    tech.lastClock.time = assignItem.timeEnd
-    tech.lastClock.timeStr = assignItem.timeEndStr
+    let time = assignItem.timeEnd
     if (assignItem.orderRule != '由后到前') {
       tech.lastClock.relativeTime = assignItem.timeEnd
       tech.lastClock.relativeTimeStr = assignItem.timeEndStr
     }
+    if (
+      assignItem.timeStartStr <= tech.attendanceInfo.lunchTime &&
+      assignItem.timeEndStr > tech.attendanceInfo.lunchTime
+    ) {
+      time = new Date(time.getTime() + tech.attendanceInfo.lunchTimeDuration * 60 * 1000)
+      tech.lastClock.relativeTime = time
+      tech.lastClock.relativeTimeStr = this.getTimeStr(time)
+    }
+
+    tech.lastClock.time = time
+    tech.lastClock.timeStr = this.getTimeStr(time)
+
     // 更新排序
     this.data.technicianList.sort((a, b) => a.lastClock.relativeTime - b.lastClock.relativeTime)
   },
   async initData() {
     await this.getScheduleData()
     await this.getTechnicianList()
+    await this.getWorkingTable()
     this.assign()
   },
   getTimeByStr(timeStr) {

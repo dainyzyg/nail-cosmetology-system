@@ -30,7 +30,8 @@
                 .name {{positionObj[i.time+'-'+j].name}}
                 .number {{positionObj[i.time+'-'+j].number+'/'+positionObj[i.time+'-'+j].count}}
               .divider
-              .schedule-btn-line {{positionObj[i.time+'-'+j].projects}}
+              .schedule-btn-line
+                .name {{positionObj[i.time+'-'+j].projects}}
             .empty-schedule(v-if="!positionObj[i.time+'-'+j]" )
               i.el-icon-circle-plus
           .schedule-line-order(v-for="j in getOverFlowOrder(i)" @click="selectOrder(j.position)")
@@ -39,7 +40,8 @@
                 .name {{j.name}}
                 .number {{j.number+'/'+j.count}}
               .divider
-              .schedule-btn-line {{j.projects}}
+              .schedule-btn-line
+                .name {{j.projects}}
     OrderModal(:visible.sync="orderVisible" :title="title" :data="selectedOrder" @save="orderSave" @delete="deleteOrder")
     AssignModal(:visible.sync="assignVisible")
 </template>
@@ -472,8 +474,7 @@ export default {
   overflow: hidden;
   white-space: nowrap;
   flex: 1;
-  display: flex;
-  justify-content: flex-start;
+  text-align: left;
 }
 .number {
   flex: 0 0 40px;

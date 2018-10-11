@@ -2,9 +2,9 @@
   .page-wraper.flex
     .nav-menu
       el-menu.menu(:default-active='$router.currentRoute.path', :router='true', background-color='#304156', text-color='#a7b1c2', active-text-color='#fff')
-        el-menu-item(index='/order')
-          i.el-icon-tickets
-          span(slot='title') 订单管理
+        //- el-menu-item(index='/order')
+        //-   i.el-icon-tickets
+        //-   span(slot='title') 订单管理
         el-menu-item(index='/clockschedule')
           i.el-icon-time
           span(slot='title') 排钟表
