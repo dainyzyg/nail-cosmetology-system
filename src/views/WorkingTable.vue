@@ -69,6 +69,7 @@ export default {
         await this.$IDB.put('workingTable', this.formData)
         this.addVisible = false
         this.getData()
+        this.$algorithm.initData()
       })
     },
     async edit(data) {

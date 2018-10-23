@@ -18,7 +18,7 @@ Vue.use(Router)
 
 export default new Router({
   routes: [
-    { path: '/', redirect: '/order' },
+    { path: '/', redirect: '/clockschedule' },
     { path: '/order', component: Order },
     { path: '/assign', component: Assign },
     { path: '/technician', component: Technician },

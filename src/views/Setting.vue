@@ -3,12 +3,12 @@
     el-form(label-width="200px")
       el-form-item(label="当前时间")
         el-time-picker(v-model="dateTimeNow")
-      el-form-item(label='必做插队拖后时间')
-        el-input-number(v-model="mustDoneDelayTime")
+      el-form-item(label='必做提前计算时间')
+        el-input-number(v-model="doAdvanceTime")
       //- el-form-item(label='用户等待时间')
       //-   el-input-number(v-model="waitingTime")
-      el-form-item(label='插队拖后时间')
-        el-input-number(v-model="delayTime")
+      el-form-item(label='指定技师提前计算时间')
+        el-input-number(v-model="designatedTechAdvanceTime")
       el-form-item(label='后备时间')
         el-input-number(v-model="minorTime")
       el-form-item(label='最后备时间')
@@ -26,9 +26,8 @@
 </template>
 <script>
 const timeArray = [
-  'mustDoneDelayTime',
-  'waitingTime',
-  'delayTime',
+  'doAdvanceTime',
+  'designatedTechAdvanceTime',
   'minorTime',
   'subTime',
   'priorityTime',
@@ -38,15 +37,15 @@ const timeArray = [
   'weekendEndTime'
 ]
 const watch = {}
-timeArray.forEach(i => {
-  watch[i] = val => {
+timeArray.forEach((i) => {
+  watch[i] = (val) => {
     localStorage[i] = val
   }
 })
 export default {
   data() {
     const data = {}
-    timeArray.forEach(i => {
+    timeArray.forEach((i) => {
       data[i] = localStorage[i]
     })
     return {

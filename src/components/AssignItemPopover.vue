@@ -1,8 +1,8 @@
 <template lang="pug">
   el-popover(placement="right" v-model="visible")
     //- el-button(size="medium" type="text" @click="popVisible = false") 取消
-    el-button(v-if="assignItem.status=='waiting'" type="primary" size="medium" @click="unshiftToAssignList(assignItem,'fix')") 固定
-    el-button(v-if="assignItem.status=='waiting'" type="success" size="medium" @click="unshiftToAssignList(assignItem,'start')") 开始
+    el-button(v-if="['waiting','advance'].includes(assignItem.status)" type="primary" size="medium" @click="unshiftToAssignList(assignItem,'fix')") 固定
+    el-button(v-if="['waiting','advance'].includes(assignItem.status)" type="success" size="medium" @click="unshiftToAssignList(assignItem,'start')") 开始
     el-button(v-if="assignItem.status=='start'||assignItem.status=='fix'" type="danger" size="medium" @click="cancelAssign") 取消
     el-button(v-if="assignItem.status=='fix'" type="success" size="medium" @click="startProject") 开始
     el-button(v-if="assignItem.status=='start'" type="warning" size="medium" @click="endProject") 结束
@@ -61,6 +61,8 @@ export default {
           return '#fadb14'
         case 'waiting':
           return '#52c41a'
+        case 'advance':
+          return '#1890ff'
       }
       return '#8c8c8c'
     }

@@ -95,6 +95,9 @@ export default {
         case 'waiting':
           background = '#52c41a'
           break
+        case 'advance':
+          background = '#1890ff'
+          break
       }
       return {
         left: `calc(${left}% - 1px)`,
