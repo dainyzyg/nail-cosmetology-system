@@ -3,7 +3,7 @@
     .panel.tech-list
       .panel-title 技师列表
       .panet-content
-        .tech-line(v-for="i in technicianList")
+        .tech-line(v-for="i in technicianList" :class="{'free-tech':isTechFree(i)}")
           .tech-line-name {{i.name}}
           .tech-line-time {{i.lastClock.timeStr}}
     .panel.assign_list
@@ -71,8 +71,13 @@ export default {
       data: this.$algorithm.data
     }
   },
-  async created() {},
+  async created() {
+    this.$algorithm.initData()
+  },
   methods: {
+    isTechFree(tech) {
+      return !this.data.assignList.find((x) => x.techID == tech.id && x.status == 'start')
+    },
     dateTimeNowChange(val) {
       localStorage.dateTimeNow = new Date(2018, 1, 26, val.getHours(), val.getMinutes(), val.getSeconds()).toISOString()
       this.assign()
@@ -354,7 +359,7 @@ export default {
   overflow: hidden;
 }
 .assign_list {
-  flex: 0 0 180px;
+  flex: 0 0 200px;
   padding: 0 2px;
   overflow: hidden;
 }
@@ -375,23 +380,26 @@ export default {
 .clock-schedule .panet-content {
   padding-top: 4px;
 }
-.tech-line,
-.assign-line {
+.tech-line {
   display: flex;
   height: 50px;
-  border-bottom: 2px solid #ebeef5;
+  border-bottom: 1px solid #fff;
+  border-top-right-radius: 4px;
+  border-top-left-radius: 4px;
+  overflow: hidden;
+  justify-content: center;
+  align-items: center;
+}
+.tech-line.free-tech {
+  background: #f5222d;
+  color: #fff;
 }
 .schedule-line {
   display: flex;
   width: auto;
   height: 60px;
 }
-.tech-line,
-.assign-line {
-  overflow: hidden;
-  justify-content: center;
-  align-items: center;
-}
+
 .tech-line-name {
   margin-left: 6px;
   flex: 1;
@@ -404,6 +412,9 @@ export default {
   margin-right: 6px;
   flex: 0 0 40px;
   text-align: right;
+}
+.tech-line.free-tech .tech-line-time {
+  color: #fff;
 }
 .schedule-line-time {
   background: white;
@@ -438,10 +449,7 @@ export default {
 .divider {
   height: 6px;
 }
-.assign-btn {
-  width: 180px;
-  padding: 7px 6px;
-}
+
 .schedule-btn {
   flex: 1;
   padding: 8px 6px;

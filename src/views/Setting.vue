@@ -9,6 +9,10 @@
       //-   el-input-number(v-model="waitingTime")
       el-form-item(label='指定技师提前计算时间')
         el-input-number(v-model="designatedTechAdvanceTime")
+      el-form-item(label='必做客户推后时间')
+        el-input-number(v-model="doDelayTime")
+      el-form-item(label='指定技师客户推后时间')
+        el-input-number(v-model="designatedTechDelayTime")
       el-form-item(label='后备时间')
         el-input-number(v-model="minorTime")
       el-form-item(label='最后备时间')
@@ -28,6 +32,8 @@
 const timeArray = [
   'doAdvanceTime',
   'designatedTechAdvanceTime',
+  'doDelayTime',
+  'designatedTechDelayTime',
   'minorTime',
   'subTime',
   'priorityTime',
@@ -40,6 +46,7 @@ const watch = {}
 timeArray.forEach((i) => {
   watch[i] = (val) => {
     localStorage[i] = val
+    // window.algorithm.initData()
   }
 })
 export default {
@@ -60,7 +67,7 @@ export default {
     dateTimeNow(val) {
       localStorage.dateTimeNow = new Date(2018, 1, 26, val.getHours(), val.getMinutes(), val.getSeconds()).toISOString()
       this.$algorithm.timeDuration = 0
-      this.$algorithm.assignpProjects()
+      this.$algorithm.initData()
     }
   }
 }

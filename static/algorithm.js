@@ -316,6 +316,7 @@ window.algorithm = {
       // debugger
       let canAssign = this.judgeAssign(techItem.tech.id)
       if (canAssign) {
+        this.data.advancMultiList.forEach((x) => (x.technicians = x.technicians.filter((f) => f != techItem.tech.id)))
         this.assignItem(techItem, order)
         return
       }
@@ -954,6 +955,9 @@ window.algorithm = {
   getOrder() {
     const doAdvanceTime = parseInt(localStorage.doAdvanceTime)
     const designatedTechAdvanceTime = parseInt(localStorage.designatedTechAdvanceTime)
+    const doDelayTime = parseInt(localStorage.doDelayTime)
+    const designatedTechDelayTime = parseInt(localStorage.designatedTechDelayTime)
+
     const orderList = []
     const advanceNowList = []
     const advanceList = []
@@ -976,7 +980,13 @@ window.algorithm = {
           if (order.isArrive && order.isfree) {
             advanceNowList.push({ order, projectItem: waitingProjectList[index] })
           } else {
-            let timeStart = order.timePositions[number].time
+            // 设置推后时间
+            let delayMinutes = designatedTechDelayTime
+            if (waitingProjectList[index].project.do) {
+              delayMinutes = doDelayTime
+            }
+            let timeStart = new Date(order.timePositions[number].time.getTime() + delayMinutes * 60 * 1000)
+            // 如果客户到场正在做别的项目，设置开始时间等于正在做的项目的结束时间
             if (order.isArrive && !order.isfree) {
               let timeEndList = this.data.assignList.filter((x) => x.orderID == order.id).map((m) => m.timeEnd)
               timeEndList.length > 0 && (timeStart = new Date(Math.max(...timeEndList)))
@@ -1040,6 +1050,9 @@ window.algorithm = {
     this.saveScheduleData()
   },
   startAssignItem(assignItem) {
+    if (this.data.assignList.find((x) => x.techID == assignItem.techID && x.status == 'start')) {
+      throw new Error('该技师已经有开始的项目，无法分配！')
+    }
     assignItem.status = 'start'
 
     assignItem.timeStart = new Date(Math.max(this.getDateNow(), assignItem.timeStart))
@@ -1093,9 +1106,10 @@ window.algorithm = {
     this.saveScheduleData()
   },
   unshiftToAssignList(assignItem, status, index) {
-    this.data.preAssignList.splice(index, 1)
-    assignItem.status = status
     if (status == 'start') {
+      if (this.data.assignList.find((x) => x.techID == assignItem.techID && x.status == 'start')) {
+        throw new Error('该技师已经有开始的项目，无法分配！')
+      }
       assignItem.timeStart = new Date(Math.max(this.getDateNow(), assignItem.timeStart))
       assignItem.timeStartStr = this.getTimeStr(assignItem.timeStart)
       assignItem.timeEnd = new Date(assignItem.timeStart.getTime() + assignItem.duration * 60 * 1000)
@@ -1111,6 +1125,9 @@ window.algorithm = {
       assignItem.realTimeEnd = assignItem.timeEnd
       assignItem.realTimeEndStr = assignItem.timeEndStr
     }
+    this.data.preAssignList.splice(index, 1)
+    assignItem.status = status
+
     this.data.assignList.unshift(assignItem)
     this.data.orderObj[assignItem.orderID].isfree = false
     const orderItem = this.data.orderObj[assignItem.orderID].orderInfo.find((x) => x.project.id == assignItem.projectID)

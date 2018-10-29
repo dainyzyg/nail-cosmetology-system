@@ -12,7 +12,7 @@
         i.el-icon-caret-right
         | {{assignItem.orderName}}
       .divider
-      .btn-line {{assignItem.number+'/'+assignItem.count+' '+assignItem.projectName+' '+assignItem.timeStartStr}}
+      .btn-line {{assignItem.number+'/'+assignItem.count+' '+assignItem.projectName+' '+assignItem.timeStartStr+'-'+assignItem.timeEndStr}}
 </template>
 
 <script>
