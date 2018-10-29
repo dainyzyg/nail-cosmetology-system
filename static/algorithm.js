@@ -149,7 +149,8 @@ window.algorithm = {
       lastClockTimeStr = lastRelativeClockTimeStr = technician.attendanceInfo.lunchTimeEnd
     }
 
-    this.data.assignList.concat(this.data.preAssignList).forEach((x) => {
+    // this.data.assignList.concat(this.data.preAssignList).forEach((x) => {
+    this.data.assignList.forEach((x) => {
       if (x.techID == technician.id && lastClockTimeStr < x.timeEndStr) {
         lastClockTimeStr = x.timeEndStr
         lastClockStartTimeStr = x.timeStartStr

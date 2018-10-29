@@ -383,7 +383,7 @@ export default {
 .tech-line {
   display: flex;
   height: 50px;
-  border-bottom: 1px solid #fff;
+  border-bottom: 2px solid #ebeef5;
   border-top-right-radius: 4px;
   border-top-left-radius: 4px;
   overflow: hidden;
@@ -391,6 +391,7 @@ export default {
   align-items: center;
 }
 .tech-line.free-tech {
+  border-bottom: 1px solid #fff;
   background: #f5222d;
   color: #fff;
 }
