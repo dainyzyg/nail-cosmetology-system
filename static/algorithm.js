@@ -199,8 +199,23 @@ window.algorithm = {
         }
       }
     })
-    this.data.technicianList = technicianList.sort((a, b) => a.lastClock.relativeTime - b.lastClock.relativeTime)
+    this.data.technicianList = technicianList.sort((a, b) => {
+      let timeDiff = a.lastClock.relativeTime - b.lastClock.relativeTime
+      if (timeDiff == 0) return this.compareString(a.name, b.name)
+      return timeDiff
+    })
     this.getClockSchedule()
+  },
+  compareString(a, b) {
+    if (a < b) {
+      // 按某种排序标准进行比较, a 小于 b
+      return -1
+    }
+    if (a > b) {
+      return 1
+    }
+    // a must be equal to b
+    return 0
   },
   async getWorkingTable() {
     const r = await window.IDB.getAll('workingTable', this.getDateStart())
@@ -292,32 +307,36 @@ window.algorithm = {
     // 按相对时间排序（因为小项不过单）如果时间一样，小项优先级最低的做，其他优先级高的做
     technicianTimeList.sort((a, b) => {
       // 由前到后的排序时间
-      let timeA = a.relativeTimeStart.getTime() + a.delayTime * 60 * 1000
-      let timeB = b.relativeTimeStart.getTime() + b.delayTime * 60 * 1000
+      let timeA = a.relativeTimeStart.getTime() + a.delayTotal * 60 * 1000
+      let timeB = b.relativeTimeStart.getTime() + b.delayTotal * 60 * 1000
       // 由后到前的排序时间
       if (a.projectItem.kind.orderRule == '由后到前') {
-        timeA = a.timeStart.getTime() + a.delayTime * 60 * 1000
+        timeA = a.timeStart.getTime() + a.delayTotal * 60 * 1000
       }
       if (b.projectItem.kind.orderRule == '由后到前') {
-        timeB = b.timeStart.getTime() + b.delayTime * 60 * 1000
+        timeB = b.timeStart.getTime() + b.delayTotal * 60 * 1000
       }
       const timeDif = timeA - timeB
 
       if (timeDif == 0 && a.projectItem.kind.orderRule == '由后到前' && b.projectItem.kind.orderRule == '由后到前') {
-        return b.tech.lastClock.relativeTime - a.tech.lastClock.relativeTime
+        let diff = b.tech.lastClock.relativeTime - a.tech.lastClock.relativeTime
+        if (diff == 0) return this.compareString(a.tech.name, b.tech.name)
+        return diff
       }
 
       if (timeDif == 0 && a.projectItem.kind.orderRule == '由前到后' && b.projectItem.kind.orderRule == '由前到后') {
-        return a.tech.lastClock.relativeTime - b.tech.lastClock.relativeTime
+        let diff = a.tech.lastClock.relativeTime - b.tech.lastClock.relativeTime
+        if (diff == 0) return this.compareString(a.tech.name, b.tech.name)
+        return diff
       }
+      if (timeDif == 0) return this.compareString(a.tech.name, b.tech.name)
       return timeDif
     })
     // 判断影不影响必做提前计算
     for (let techItem of technicianTimeList) {
-      // debugger
-      let canAssign = this.judgeAssign(techItem.tech.id)
+      let canAssign = this.judgeAssign(techItem)
       if (canAssign) {
-        this.data.advancMultiList.forEach((x) => (x.technicians = x.technicians.filter((f) => f != techItem.tech.id)))
+        // this.data.advancMultiList.forEach((x) => (x.technicians = x.technicians.filter((f) => f != techItem.tech.id)))
         this.assignItem(techItem, order)
         return
       }
@@ -358,24 +377,29 @@ window.algorithm = {
     // 按相对时间排序（因为小项不过单）如果时间一样，小项优先级最低的做，其他优先级高的做
     technicianTimeList.sort((a, b) => {
       // 由前到后的排序时间
-      let timeA = a.relativeTimeStart.getTime() + a.delayTime * 60 * 1000
-      let timeB = b.relativeTimeStart.getTime() + b.delayTime * 60 * 1000
+      let timeA = a.relativeTimeStart.getTime() + a.delayTotal * 60 * 1000
+      let timeB = b.relativeTimeStart.getTime() + b.delayTotal * 60 * 1000
       // 由后到前的排序时间
       if (a.projectItem.kind.orderRule == '由后到前') {
-        timeA = a.timeStart.getTime() + a.delayTime * 60 * 1000
+        timeA = a.timeStart.getTime() + a.delayTotal * 60 * 1000
       }
       if (b.projectItem.kind.orderRule == '由后到前') {
-        timeB = b.timeStart.getTime() + b.delayTime * 60 * 1000
+        timeB = b.timeStart.getTime() + b.delayTotal * 60 * 1000
       }
       const timeDif = timeA - timeB
 
       if (timeDif == 0 && a.projectItem.kind.orderRule == '由后到前' && b.projectItem.kind.orderRule == '由后到前') {
-        return b.tech.lastClock.relativeTime - a.tech.lastClock.relativeTime
+        let diff = b.tech.lastClock.relativeTime - a.tech.lastClock.relativeTime
+        if (diff == 0) return this.compareString(a.tech.name, b.tech.name)
+        return diff
       }
 
       if (timeDif == 0 && a.projectItem.kind.orderRule == '由前到后' && b.projectItem.kind.orderRule == '由前到后') {
-        return a.tech.lastClock.relativeTime - b.tech.lastClock.relativeTime
+        let diff = a.tech.lastClock.relativeTime - b.tech.lastClock.relativeTime
+        if (diff == 0) return this.compareString(a.tech.name, b.tech.name)
+        return diff
       }
+      if (timeDif == 0) return this.compareString(a.tech.name, b.tech.name)
       return timeDif
     })
     // if (order.name == '到场正在做') debugger
@@ -408,24 +432,29 @@ window.algorithm = {
     // 按相对时间排序（因为小项不过单）如果时间一样，小项优先级最低的做，其他优先级高的做
     technicianTimeList.sort((a, b) => {
       // 由前到后的排序时间
-      let timeA = a.relativeTimeStart.getTime() + a.delayTime * 60 * 1000
-      let timeB = b.relativeTimeStart.getTime() + b.delayTime * 60 * 1000
+      let timeA = a.relativeTimeStart.getTime() + a.delayTotal * 60 * 1000
+      let timeB = b.relativeTimeStart.getTime() + b.delayTotal * 60 * 1000
       // 由后到前的排序时间
       if (a.projectItem.kind.orderRule == '由后到前') {
-        timeA = a.timeStart.getTime() + a.delayTime * 60 * 1000
+        timeA = a.timeStart.getTime() + a.delayTotal * 60 * 1000
       }
       if (b.projectItem.kind.orderRule == '由后到前') {
-        timeB = b.timeStart.getTime() + b.delayTime * 60 * 1000
+        timeB = b.timeStart.getTime() + b.delayTotal * 60 * 1000
       }
       const timeDif = timeA - timeB
 
       if (timeDif == 0 && a.projectItem.kind.orderRule == '由后到前' && b.projectItem.kind.orderRule == '由后到前') {
-        return b.tech.lastClock.relativeTime - a.tech.lastClock.relativeTime
+        let diff = b.tech.lastClock.relativeTime - a.tech.lastClock.relativeTime
+        if (diff == 0) return this.compareString(a.tech.name, b.tech.name)
+        return diff
       }
 
       if (timeDif == 0 && a.projectItem.kind.orderRule == '由前到后' && b.projectItem.kind.orderRule == '由前到后') {
-        return a.tech.lastClock.relativeTime - b.tech.lastClock.relativeTime
+        let diff = a.tech.lastClock.relativeTime - b.tech.lastClock.relativeTime
+        if (diff == 0) return this.compareString(a.tech.name, b.tech.name)
+        return diff
       }
+      if (timeDif == 0) return this.compareString(a.tech.name, b.tech.name)
       return timeDif
     })
     this.assignItem(technicianTimeList[0], order)
@@ -451,19 +480,12 @@ window.algorithm = {
     }
     freeTechnicianTimeList = freeTechnicianTimeList.filter((x) => !this.data.advancTechIDList.includes(x.tech.id))
     if (freeTechnicianTimeList.length > 0) {
-      let techID
-      if (freeTechnicianTimeList.length == 1) {
-        techID = freeTechnicianTimeList[0].tech.id
-      }
-      let canAssign = this.judgeAdvanceAssign(
-        {
-          order,
-          ...freeTechnicianTimeList[0],
-          timeStart: earliesTimeStart,
-          technicians: freeTechnicianTimeList.map((m) => m.tech.id)
-        },
-        techID
-      )
+      let canAssign = this.judgeAdvanceAssign({
+        order,
+        ...freeTechnicianTimeList[0],
+        timeStart: earliesTimeStart,
+        technicians: freeTechnicianTimeList.map((m) => m.tech.id)
+      })
       if (canAssign) {
         return
       }
@@ -471,24 +493,29 @@ window.algorithm = {
     // 按相对时间排序（因为小项不过单）如果时间一样，小项优先级最低的做，其他优先级高的做
     busyTechnicianTimeList.sort((a, b) => {
       // 由前到后的排序时间
-      let timeA = a.relativeTimeStart.getTime() + a.delayTime * 60 * 1000
-      let timeB = b.relativeTimeStart.getTime() + b.delayTime * 60 * 1000
+      let timeA = a.relativeTimeStart.getTime() + a.delayTotal * 60 * 1000
+      let timeB = b.relativeTimeStart.getTime() + b.delayTotal * 60 * 1000
       // 由后到前的排序时间
       if (a.projectItem.kind.orderRule == '由后到前') {
-        timeA = a.timeStart.getTime() + a.delayTime * 60 * 1000
+        timeA = a.timeStart.getTime() + a.delayTotal * 60 * 1000
       }
       if (b.projectItem.kind.orderRule == '由后到前') {
-        timeB = b.timeStart.getTime() + b.delayTime * 60 * 1000
+        timeB = b.timeStart.getTime() + b.delayTotal * 60 * 1000
       }
       const timeDif = timeA - timeB
 
       if (timeDif == 0 && a.projectItem.kind.orderRule == '由后到前' && b.projectItem.kind.orderRule == '由后到前') {
-        return b.tech.lastClock.relativeTime - a.tech.lastClock.relativeTime
+        let diff = b.tech.lastClock.relativeTime - a.tech.lastClock.relativeTime
+        if (diff == 0) return this.compareString(a.tech.name, b.tech.name)
+        return diff
       }
 
       if (timeDif == 0 && a.projectItem.kind.orderRule == '由前到后' && b.projectItem.kind.orderRule == '由前到后') {
-        return a.tech.lastClock.relativeTime - b.tech.lastClock.relativeTime
+        let diff = a.tech.lastClock.relativeTime - b.tech.lastClock.relativeTime
+        if (diff == 0) return this.compareString(a.tech.name, b.tech.name)
+        return diff
       }
+      if (timeDif == 0) return this.compareString(a.tech.name, b.tech.name)
       return timeDif
     })
     for (let techItem of busyTechnicianTimeList) {
@@ -580,7 +607,11 @@ window.algorithm = {
     tech.lastClock.assignID = item.id
 
     // 更新排序
-    this.tempTechnicianList.sort((a, b) => a.lastClock.relativeTime - b.lastClock.relativeTime)
+    this.tempTechnicianList.sort((a, b) => {
+      let diff = a.lastClock.relativeTime - b.lastClock.relativeTime
+      if (diff == 0) return this.compareString(a.name, b.name)
+      return diff
+    })
   },
   hasExchangeProject(item, order) {
     // preAssignItem增加字段 delayTime isAdvance.tech lastclock 增加tech.lastClock.assignID
@@ -873,11 +904,24 @@ window.algorithm = {
     }
     console.log(this.data.advancTechIDList, this.data.advancMultiList)
   },
-  judgeAssign(techID) {
-    let isExisted = this.data.advancTechIDList.includes(techID)
+  // 判断普通的项目是否影响 提前计算 的项目
+  judgeAssign(techItem) {
+    let isExisted = this.data.advancTechIDList.includes(techItem.tech.techID)
     if (isExisted) return false
-    const newAdvancMultiList = [...this.data.advancMultiList, { technicians: [techID] }]
-    return this.techAssign(newAdvancMultiList)
+    if (this.data.advancMultiList.length <= 0) return true
+    let advancMultiListClone = this.clone(this.data.advancMultiList)
+    advancMultiListClone.forEach((x) => {
+      let timeStart = new Date(Math.max(x.timeStart, this.getDateNow()))
+      // 找到被影响的项目，去掉技师，然后看看能不能排开
+      if (techItem.timeEnd > timeStart) {
+        x.technicians = x.technicians.filter((f) => f != techItem.tech.id)
+      }
+    })
+    if (this.techAssign(advancMultiListClone)) {
+      this.data.advancMultiList = advancMultiListClone
+      return true
+    }
+    return false
   },
   judgeAdvanceAssign(techItem, techID) {
     if (techID) {
@@ -907,52 +951,52 @@ window.algorithm = {
     }
     return false
   },
-  findUnAssignSet(data) {
-    for (let i = 1; i < data.length; i++) {
-      for (let item of this.getGroupByCount(data, i)) {
-        let subList = []
-        for (let dataItem of data) {
-          if (this.isSubSet(item, dataItem.technicians)) {
-            subList.push(dataItem)
-            if (subList.length > item.length) {
-              return item
-            }
-          }
-        }
-      }
-    }
-    return false
-  },
-  isSubSet(set, subSet) {
-    try {
-      return subSet.every((x) => set.includes(x))
-    } catch (e) {
-      return false
-    }
-  },
-  getGroupByCount(data, size, result = [], allResult = []) {
-    // debugger
-    if (size > data.length) {
-      return
-    }
-    if (size == data.length) {
-      let newResult = [...result]
-      data.forEach((e) => newResult.push(...e.technicians))
-      allResult.push([...new Set(newResult)])
-    } else {
-      for (let i = 0; i < data.length; i++) {
-        let newResult = [...new Set([...result, ...data[i].technicians])]
-        if (size == 1) {
-          allResult.push(newResult)
-        } else {
-          let newArr = [...data]
-          newArr.splice(0, i + 1)
-          this.getGroupByCount(newArr, size - 1, newResult, allResult)
-        }
-      }
-    }
-    return allResult
-  },
+  // findUnAssignSet(data) {
+  //   for (let i = 1; i < data.length; i++) {
+  //     for (let item of this.getGroupByCount(data, i)) {
+  //       let subList = []
+  //       for (let dataItem of data) {
+  //         if (this.isSubSet(item, dataItem.technicians)) {
+  //           subList.push(dataItem)
+  //           if (subList.length > item.length) {
+  //             return item
+  //           }
+  //         }
+  //       }
+  //     }
+  //   }
+  //   return false
+  // },
+  // isSubSet(set, subSet) {
+  //   try {
+  //     return subSet.every((x) => set.includes(x))
+  //   } catch (e) {
+  //     return false
+  //   }
+  // },
+  // getGroupByCount(data, size, result = [], allResult = []) {
+  //   // debugger
+  //   if (size > data.length) {
+  //     return
+  //   }
+  //   if (size == data.length) {
+  //     let newResult = [...result]
+  //     data.forEach((e) => newResult.push(...e.technicians))
+  //     allResult.push([...new Set(newResult)])
+  //   } else {
+  //     for (let i = 0; i < data.length; i++) {
+  //       let newResult = [...new Set([...result, ...data[i].technicians])]
+  //       if (size == 1) {
+  //         allResult.push(newResult)
+  //       } else {
+  //         let newArr = [...data]
+  //         newArr.splice(0, i + 1)
+  //         this.getGroupByCount(newArr, size - 1, newResult, allResult)
+  //       }
+  //     }
+  //   }
+  //   return allResult
+  // },
   getOrder() {
     const doAdvanceTime = parseInt(localStorage.doAdvanceTime)
     const designatedTechAdvanceTime = parseInt(localStorage.designatedTechAdvanceTime)
@@ -978,7 +1022,7 @@ window.algorithm = {
           (waitingProjectList[index].project.do && timeDiff <= doAdvanceTime * 60 * 1000) ||
           (waitingProjectList[index].technicians.length > 0 && timeDiff <= designatedTechAdvanceTime * 60 * 1000)
         ) {
-          if (order.isArrive && order.isfree) {
+          if (order.isArrive == 'arrive' && order.isfree) {
             advanceNowList.push({ order, projectItem: waitingProjectList[index] })
           } else {
             // 设置推后时间
@@ -986,9 +1030,10 @@ window.algorithm = {
             if (waitingProjectList[index].project.do) {
               delayMinutes = doDelayTime
             }
+            // 提前计算的项目开始时间延迟 designatedTechDelayTime || doDelayTime
             let timeStart = new Date(order.timePositions[number].time.getTime() + delayMinutes * 60 * 1000)
             // 如果客户到场正在做别的项目，设置开始时间等于正在做的项目的结束时间
-            if (order.isArrive && !order.isfree) {
+            if (order.isArrive == 'arrive' && !order.isfree) {
               let timeEndList = this.data.assignList.filter((x) => x.orderID == order.id).map((m) => m.timeEnd)
               timeEndList.length > 0 && (timeStart = new Date(Math.max(...timeEndList)))
             }
@@ -1000,7 +1045,7 @@ window.algorithm = {
       // #endregion
 
       // 找到正常排队的订单
-      if (order.isArrive && order.isfree) {
+      if (order.isArrive == 'arrive' && order.isfree) {
         orderList.push(order)
       }
     })
@@ -1084,7 +1129,11 @@ window.algorithm = {
       if (tech) {
         this.computingTechLastClock(tech)
         // 更新排序
-        this.data.technicianList.sort((a, b) => a.lastClock.relativeTime - b.lastClock.relativeTime)
+        this.data.technicianList.sort((a, b) => {
+          let diff = a.lastClock.relativeTime - b.lastClock.relativeTime
+          if (diff == 0) return this.compareString(a.name, b.name)
+          return diff
+        })
       }
       this.assign()
       this.saveScheduleData()
@@ -1161,7 +1210,11 @@ window.algorithm = {
     tech.lastClock.timeStr = this.getTimeStr(time)
     tech.lastClock.assignID = assignItem.id
     // 更新排序
-    this.data.technicianList.sort((a, b) => a.lastClock.relativeTime - b.lastClock.relativeTime)
+    this.data.technicianList.sort((a, b) => {
+      let diff = a.lastClock.relativeTime - b.lastClock.relativeTime
+      if (diff == 0) return this.compareString(a.name, b.name)
+      return diff
+    })
   },
   async initData() {
     this.data.orderObj = {}

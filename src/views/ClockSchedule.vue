@@ -29,9 +29,15 @@
               .schedule-btn-line
                 .name {{positionObj[i.time+'-'+j].name}}
                 .number {{positionObj[i.time+'-'+j].number+'/'+positionObj[i.time+'-'+j].count}}
-              .divider
-              .schedule-btn-line
-                .name {{positionObj[i.time+'-'+j].projects}}
+              .project-group
+                .project-item(v-for="k in orderObj[positionObj[i.time+'-'+j].orderID].orderInfo||[]")
+                  .project-name {{k.project.name}}
+                  .project-tech {{getDesignatedTech(k.technicians)}}
+              //- .schedule-btn-line
+              //-   .name {{positionObj[i.time+'-'+j].projects}}
+              //- .divider
+              //- .schedule-btn-line
+              //-   .name {{positionObj[i.time+'-'+j].projects}}
             .empty-schedule(v-if="!positionObj[i.time+'-'+j]" )
               i.el-icon-circle-plus
           .schedule-line-order(v-for="j in getOverFlowOrder(i)" @click="selectOrder(j.position)")
@@ -59,7 +65,7 @@ export default {
   data() {
     return {
       dateTimeNow: this.$algorithm.getDateNow(),
-      selectedOrder: { orderInfo: [] },
+      selectedOrder: { orderInfo: [], isArrive: 'notArrive' },
       orderVisible: false,
       assignVisible: false,
       workBeginTime: this.$algorithm.workBeginTime(),
@@ -68,13 +74,28 @@ export default {
       intervals: 15,
       title: '',
       projectDuration: 45,
-      data: this.$algorithm.data
+      data: this.$algorithm.data,
+      techCount: 0
     }
   },
   async created() {
+    this.getTechCount()
     this.$algorithm.initData()
   },
   methods: {
+    async getTechCount() {
+      await window.IDB.executeTransaction(['technician'], 'readonly', (t) => {
+        const store = t.objectStore('technician')
+        const request = store.count()
+        request.onsuccess = (event) => {
+          const cursor = event.target.result
+          this.techCount = cursor
+        }
+      })
+    },
+    getDesignatedTech(techs) {
+      return techs.map((x) => x.name.substr(0, 2)).join(' ')
+    },
     isTechFree(tech) {
       return !this.data.assignList.find((x) => x.techID == tech.id && x.status == 'start')
     },
@@ -90,7 +111,16 @@ export default {
       }
     },
     getOrderType(order) {
-      return order.isArrive ? 'success' : ''
+      switch (order.isArrive) {
+        case 'arrive':
+          return 'success'
+        case 'arriveNoCompute':
+          return 'primary'
+        case 'notArrive':
+          return ''
+        default:
+          return ''
+      }
     },
     getProjects(order) {
       return order.orderInfo.map((x) => x.project.name).join('|')
@@ -169,7 +199,8 @@ export default {
         }
       })
       this.selectedOrder.timePositions = timePositions
-      this.orderObj[this.selectedOrder.id] = this.selectedOrder
+      this.$set(this.orderObj, this.selectedOrder.id, this.selectedOrder)
+      // 响应式 this.orderObj[this.selectedOrder.id] = this.selectedOrder
       this.judgeMove(oldPositions)
       this.orderVisible = false
 
@@ -190,8 +221,9 @@ export default {
       this.selectedOrder.timePositions.forEach((x) => {
         delete this.positionObj[x.position]
       })
-      delete this.orderObj[this.selectedOrder.id]
-      this.selectedOrder = { orderInfo: [] }
+      this.$delete(this.orderObj, this.selectedOrder.id)
+      // 响应式delete this.orderObj[this.selectedOrder.id]
+      this.selectedOrder = { orderInfo: [], isArrive: 'notArrive' }
       this.judgeMove(oldPositions)
       console.log(this.positionObj)
       this.orderVisible = false
@@ -300,7 +332,7 @@ export default {
       if (this.positionObj[this.title]) {
         this.selectedOrder = this.orderObj[this.positionObj[this.title].orderID]
       } else {
-        this.selectedOrder = { orderInfo: [] }
+        this.selectedOrder = { orderInfo: [], isArrive: 'notArrive' }
       }
 
       this.orderVisible = true
@@ -398,7 +430,7 @@ export default {
 .schedule-line {
   display: flex;
   width: auto;
-  height: 60px;
+  height: 80px;
 }
 
 .tech-line-name {
@@ -430,12 +462,10 @@ export default {
 }
 .schedule-line-order {
   margin-left: 4px;
-
   margin-bottom: 4px;
   overflow: hidden;
-
   display: flex;
-  flex: 0 0 180px;
+  flex: 0 0 220px;
 }
 .empty-schedule i {
   font-size: 30px;
@@ -495,5 +525,26 @@ export default {
 .clear-btn {
   position: absolute;
   left: 15px;
+}
+.project-group {
+  /* background: #f5222d; */
+  height: 38px;
+  display: flex;
+  padding-top: 10px;
+}
+.project-item {
+  flex: 1;
+
+  overflow: hidden;
+}
+.project-item:not(:last-child) {
+  border-right: 1px solid;
+}
+.project-name,
+.project-tech {
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+  height: 18px;
 }
 </style>

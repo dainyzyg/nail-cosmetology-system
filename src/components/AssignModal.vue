@@ -29,6 +29,7 @@ export default {
   created() {},
   data() {
     return {
+      order: [],
       workBeginTime: this.$algorithm.workBeginTime(),
       dateNow: this.$algorithm.getDateNow(),
       dialogVisible: false,
@@ -114,10 +115,37 @@ export default {
         durationDiff += addSkill.timeDiff || 0
       }
       return duration + durationDiff
+    },
+    setOrder() {
+      const orderList = []
+      Object.keys(this.data.orderObj).forEach((x) => {
+        let order = this.data.orderObj[x]
+        if (order.isArrive && order.isfree) {
+          orderList.push(order)
+        }
+      })
+
+      orderList.sort((x, y) => {
+        let pX = x.timePositions[0]
+        let pY = y.timePositions[0]
+        if (pX.time.getTime() == pY.time.getTime()) {
+          return pX.number - pY.number
+        }
+        return pX.time - pY.time
+      })
+      this.order = orderList.map((x) => {
+        return {
+          value: x.id,
+          label: x.name,
+          children: x.orderInfo.filter((t) => !t.assignItemID).map((m) => {
+            return { value: m.project.id, label: m.project.name }
+          })
+        }
+      })
     }
   },
   computed: {
-    order() {
+    orderOld() {
       const orderList = []
       Object.keys(this.data.orderObj).forEach((x) => {
         let order = this.data.orderObj[x]
@@ -151,6 +179,7 @@ export default {
     },
     dialogVisible(val) {
       if (val) {
+        this.setOrder()
         this.formData = this.getDefalutForm()
       }
       this.$emit('update:visible', val)

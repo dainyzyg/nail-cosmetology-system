@@ -11,7 +11,11 @@
       el-form-item(label='电邮')
         el-input(auto-complete='off' v-model="data.email")
       el-form-item(label='是否到场')
-        el-switch(v-model="data.isArrive")
+        el-radio-group(v-model="data.isArrive" size="medium")
+          el-radio-button(label="arrive") 到场
+          el-radio-button(label="arriveNoCompute") 到场不参与计算
+          el-radio-button(label="notArrive") 未到场
+        //- el-switch(v-model="data.isArrive")
     .project-wrapper.flex
       PanelSelect(title="种类" :data="kindList" :selectedItem.sync="selectedKind" flex="0 0 100px")
       PanelSelect(title="项目" :data="projectList" :selectedItem.sync="selectedProject" flex="0 0 150px")
