@@ -21,33 +21,36 @@
         | 排钟表
         el-time-picker.time-now(@change="dateTimeNowChange" v-model="dateTimeNow" size="medium")
         el-button.clear-btn(@click="clearScheduleData" type="danger" size="mini") 清空数据
-      .panet-content
-        .schedule-line(v-for="i in timeList")
-          .schedule-line-time {{i.time}}
-          .schedule-line-order(v-for="j in i.orderCount" @click="selectOrder(i.time+'-'+j)")
-            el-button.schedule-btn(v-if="positionObj[i.time+'-'+j]" slot="reference" :type="getOrderType(positionObj[i.time+'-'+j])" size="medium" plain)
-              .schedule-btn-line
-                .name {{positionObj[i.time+'-'+j].name}}
-                .number {{positionObj[i.time+'-'+j].number+'/'+positionObj[i.time+'-'+j].count}}
-              .project-group
-                .project-item(v-for="k in orderObj[positionObj[i.time+'-'+j].orderID].orderInfo||[]")
-                  .project-name {{k.project.name}}
-                  .project-tech {{getDesignatedTech(k.technicians)}}
-              //- .schedule-btn-line
-              //-   .name {{positionObj[i.time+'-'+j].projects}}
-              //- .divider
-              //- .schedule-btn-line
-              //-   .name {{positionObj[i.time+'-'+j].projects}}
-            .empty-schedule(v-if="!positionObj[i.time+'-'+j]" )
-              i.el-icon-circle-plus
-          .schedule-line-order(v-for="j in getOverFlowOrder(i)" @click="selectOrder(j.position)")
-            el-button.schedule-btn(slot="reference" :type="getOrderType(j)" size="medium" plain)
-              .schedule-btn-line
-                .name {{j.name}}
-                .number {{j.number+'/'+j.count}}
-              .divider
-              .schedule-btn-line
-                .name {{j.projects}}
+      .panet-content.schedule-content
+        .schedule-time-content
+          .schedule-line-time-shadow
+            .schedule-line-time(v-for="i in timeList") {{i.time}}
+        .schedule-order-content
+          .schedule-line(v-for="i in timeList")
+            .schedule-line-order(v-for="j in i.orderCount" @click="selectOrder(i.time+'-'+j)")
+              el-button.schedule-btn(v-if="positionObj[i.time+'-'+j]" slot="reference" :type="getOrderType(positionObj[i.time+'-'+j])" size="medium" plain)
+                .schedule-btn-line
+                  .name {{positionObj[i.time+'-'+j].name}}
+                  .number {{positionObj[i.time+'-'+j].number+'/'+positionObj[i.time+'-'+j].count}}
+                .project-group
+                  .project-item(v-for="k in orderObj[positionObj[i.time+'-'+j].orderID].orderInfo||[]")
+                    .project-name {{k.project.name}}
+                    .project-tech {{getDesignatedTech(k.technicians)}}
+                //- .schedule-btn-line
+                //-   .name {{positionObj[i.time+'-'+j].projects}}
+                //- .divider
+                //- .schedule-btn-line
+                //-   .name {{positionObj[i.time+'-'+j].projects}}
+              .empty-schedule(v-if="!positionObj[i.time+'-'+j]" )
+                i.el-icon-circle-plus
+            .schedule-line-order(v-for="j in getOverFlowOrder(i)" @click="selectOrder(j.position)")
+              el-button.schedule-btn(slot="reference" :type="getOrderType(j)" size="medium" plain)
+                .schedule-btn-line
+                  .name {{j.name}}
+                  .number {{j.number+'/'+j.count}}
+                .divider
+                .schedule-btn-line
+                  .name {{j.projects}}
     OrderModal(:visible.sync="orderVisible" :title="title" :data="selectedOrder" @save="orderSave" @delete="deleteOrder")
     AssignModal(:visible.sync="assignVisible")
 </template>
@@ -364,15 +367,18 @@ export default {
   color: #606266;
   font-size: 14px;
 }
+.clock-schedule {
+  display: flex;
+}
 .panel {
   display: flex;
   flex-direction: column;
   flex: 1;
   background: #fff;
   box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
-  margin-left: 15px;
-  margin-top: 15px;
-  margin-bottom: 15px;
+  margin-left: 10px;
+  margin-top: 10px;
+  margin-bottom: 10px;
   border-radius: 4px;
   border: 2px solid #ebeef5;
 }
@@ -384,7 +390,7 @@ export default {
   cursor: pointer;
 }
 .panel:last-child {
-  margin-right: 15px;
+  margin-right: 10px;
 }
 .tech-list {
   flex: 0 0 130px;
@@ -408,6 +414,10 @@ export default {
 .panet-content {
   flex: 1;
   overflow: auto;
+}
+.clock-schedule {
+  overflow: hidden;
+  margin-right: 10px;
 }
 .clock-schedule .panet-content {
   padding-top: 4px;
@@ -449,6 +459,21 @@ export default {
 .tech-line.free-tech .tech-line-time {
   color: #fff;
 }
+.schedule-content {
+  display: flex;
+}
+.schedule-time-content {
+  flex: 0 0 60px;
+  position: sticky;
+  left: 0;
+}
+.schedule-order-content {
+  flex: 1;
+  /* overflow-y: auto; */
+}
+.schedule-line-time-shadow {
+  box-shadow: 4px 0 5px -3px rgba(0, 0, 0, 0.1);
+}
 .schedule-line-time {
   background: white;
   display: flex;
@@ -456,9 +481,8 @@ export default {
   align-items: center;
   flex: 0 0 60px;
   /* border-bottom: 2px solid #ebeef5; */
-  position: sticky;
   color: #409eff;
-  left: 0;
+  height: 80px;
 }
 .schedule-line-order {
   margin-left: 4px;
@@ -466,6 +490,7 @@ export default {
   overflow: hidden;
   display: flex;
   flex: 0 0 220px;
+  height: 76px;
 }
 .empty-schedule i {
   font-size: 30px;
