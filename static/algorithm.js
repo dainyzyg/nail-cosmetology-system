@@ -11,6 +11,7 @@ window.algorithm = {
   tempPandAStandardTime: {},
   workingTableList: [],
   data: {
+    customTimeCountObj: {},
     orderObj: {},
     positionObj: { maxIndex: 0 },
     technicianList: [],
@@ -127,7 +128,14 @@ window.algorithm = {
         orderCount = Math.ceil((techCount * this.clockScheduleIntervals) / this.durationPerOrder)
         index = 1
       }
-      let timeItem = { time, techCount, orderCount, index }
+      let timeItem = { time, techCount, orderCount, index, originalCount: orderCount }
+      // 自定义格子
+      let addCount = this.data.customTimeCountObj[time]
+      if (addCount) {
+        timeItem.orderCount += addCount
+        timeItem.addCount = addCount
+      }
+
       timeList.push(timeItem)
       lastTimeItem = timeItem
       workTime = new Date(workTime.getTime() + this.clockScheduleIntervals * 60 * 1000)
@@ -166,6 +174,8 @@ window.algorithm = {
         lastClockTimeStr > technician.attendanceInfo.lunchTime
       ) {
         time = new Date(time.getTime() + technician.attendanceInfo.lunchTimeDuration * 60 * 1000)
+        // 午餐时间要过单
+        lastRelativeClockTimeStr = this.getTimeStr(time)
       }
     }
     technician.lastClock = {
@@ -534,13 +544,19 @@ window.algorithm = {
     }
   },
   getDuration({ tech, projectItem }) {
-    let duration = projectItem.project.standardTime || 0
-    for (let add of projectItem.additions) {
-      duration += add.standardTime || 0
-    }
-    let durationDiff = tech.skillInfo[projectItem.project.id].timeDiff || 0
-    for (let add of projectItem.additions) {
-      durationDiff += tech.skillInfo[add.id].timeDiff || 0
+    let duration = 0
+    let durationDiff = 0
+    try {
+      duration = projectItem.project.standardTime || 0
+      for (let add of projectItem.additions) {
+        duration += add.standardTime || 0
+      }
+      durationDiff = tech.skillInfo[projectItem.project.id].timeDiff || 0
+      for (let add of projectItem.additions) {
+        durationDiff += tech.skillInfo[add.id].timeDiff || 0
+      }
+    } catch (e) {
+      console.log('技师和项目不匹配')
     }
     return duration + durationDiff
   },
@@ -851,6 +867,8 @@ window.algorithm = {
     const lunchTimeEnd = new Date(lunchTimeStart.getTime() + tech.attendanceInfo.lunchTimeDuration * 60 * 1000)
     if (timeStart >= lunchTimeStart && timeStart < lunchTimeEnd) {
       rObj.timeStart = lunchTimeEnd
+      // 午餐时间过单
+      rObj.relativeTimeStart = rObj.timeStart
       return this.getWorkingTableTimeStartObj(rObj)
     }
 

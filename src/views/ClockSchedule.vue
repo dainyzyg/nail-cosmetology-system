@@ -20,6 +20,7 @@
       .panel-title
         | 排钟表
         el-time-picker.time-now(@change="dateTimeNowChange" v-model="dateTimeNow" size="medium")
+        el-button.manage-btn(@click="manage" type="primary" size="mini") 空格管理
         el-button.clear-btn(@click="clearScheduleData" type="danger" size="mini") 清空数据
       .panet-content.schedule-content
         .schedule-time-content
@@ -48,25 +49,32 @@
                 .schedule-btn-line
                   .name {{j.name}}
                   .number {{j.number+'/'+j.count}}
-                .divider
-                .schedule-btn-line
-                  .name {{j.projects}}
+                .project-group
+                  .project-item(v-for="k in orderObj[j.orderID].orderInfo||[]")
+                    .project-name {{k.project.name}}
+                    .project-tech {{getDesignatedTech(k.technicians)}}
+            //- .add-schedule
+            //-     i.el-icon-circle-plus-outline
     OrderModal(:visible.sync="orderVisible" :title="title" :data="selectedOrder" @save="orderSave" @delete="deleteOrder")
     AssignModal(:visible.sync="assignVisible")
+    TimeCountManageModal(:visible.sync="timeCountVisible" :data="data")
 </template>
 <script>
 import OrderModal from '@/components/OrderModal'
 import AssignModal from '@/components/AssignModal'
 import AssignItemPopover from '@/components/AssignItemPopover'
+import TimeCountManageModal from '@/components/TimeCountManageModal'
 
 export default {
   components: {
     AssignModal,
     OrderModal,
-    AssignItemPopover
+    AssignItemPopover,
+    TimeCountManageModal
   },
   data() {
     return {
+      timeCountVisible: false,
       dateTimeNow: this.$algorithm.getDateNow(),
       selectedOrder: { orderInfo: [], isArrive: 'notArrive' },
       orderVisible: false,
@@ -86,6 +94,9 @@ export default {
     this.$algorithm.initData()
   },
   methods: {
+    manage() {
+      this.timeCountVisible = true
+    },
     async getTechCount() {
       await window.IDB.executeTransaction(['technician'], 'readonly', (t) => {
         const store = t.objectStore('technician')
@@ -511,6 +522,19 @@ export default {
   padding: 8px 6px;
   overflow: hidden;
 }
+.add-schedule i {
+  font-size: 40px;
+  color: #c0c4cc;
+}
+
+.add-schedule {
+  cursor: pointer;
+  flex: 0 0 50px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 14px;
+}
 .empty-schedule {
   border: 1px solid #dcdfe6;
   cursor: pointer;
@@ -548,6 +572,10 @@ export default {
   right: 15px;
 }
 .clear-btn {
+  position: absolute;
+  left: 100px;
+}
+.manage-btn {
   position: absolute;
   left: 15px;
 }
