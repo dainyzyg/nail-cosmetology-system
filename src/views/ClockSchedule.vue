@@ -5,7 +5,7 @@
       .panet-content
         .tech-line(v-for="i in technicianList" :class="{'free-tech':isTechFree(i)}")
           .tech-line-name {{i.name}}
-          .tech-line-time {{i.lastClock.timeStr}}
+          .tech-line-time {{formatTime(i.lastClock.timeStr)}}
     .panel.assign_list
       .panel-title 预分配
       .panet-content
@@ -25,7 +25,7 @@
       .panet-content.schedule-content
         .schedule-time-content
           .schedule-line-time-shadow
-            .schedule-line-time(v-for="i in timeList") {{i.time}}
+            .schedule-line-time(v-for="i in timeList") {{formatTime(i.time)}}
         .schedule-order-content
           .schedule-line(v-for="i in timeList")
             .schedule-line-order(v-for="j in i.orderCount" @click="selectOrder(i.time+'-'+j)")
@@ -94,6 +94,22 @@ export default {
     this.$algorithm.initData()
   },
   methods: {
+    formatTime(str) {
+      if (!str) return ''
+      let meridiem = 'AM'
+      const array = str.split(':')
+      let hours = parseInt(array[0])
+      const minutes = array[1]
+      if (hours >= 12) {
+        meridiem = 'PM'
+        if (hours > 12) {
+          hours -= 12
+        }
+      } else if (hours == 0) {
+        hours = 12
+      }
+      return `${hours}:${minutes} ${meridiem}`
+    },
     manage() {
       this.timeCountVisible = true
     },
@@ -112,6 +128,11 @@ export default {
     },
     isTechFree(tech) {
       return !this.data.assignList.find((x) => x.techID == tech.id && x.status == 'start')
+      // let isFree = !this.data.assignList.find((x) => x.techID == tech.id && x.status == 'start')
+      // if (isFree && tech.lastClock.time > this.$algorithm.getDateNow()) {
+      //   isFree = false
+      // }
+      // return isFree
     },
     dateTimeNowChange(val) {
       localStorage.dateTimeNow = new Date(2018, 1, 26, val.getHours(), val.getMinutes(), val.getSeconds()).toISOString()
@@ -404,11 +425,11 @@ export default {
   margin-right: 10px;
 }
 .tech-list {
-  flex: 0 0 130px;
+  flex: 0 0 155px;
   overflow: hidden;
 }
 .assign_list {
-  flex: 0 0 200px;
+  flex: 0 0 220px;
   padding: 0 2px;
   overflow: hidden;
 }
@@ -464,7 +485,7 @@ export default {
 .tech-line-time {
   color: #409eff;
   margin-right: 6px;
-  flex: 0 0 40px;
+  flex: 0 0 65px;
   text-align: right;
 }
 .tech-line.free-tech .tech-line-time {
@@ -474,7 +495,7 @@ export default {
   display: flex;
 }
 .schedule-time-content {
-  flex: 0 0 60px;
+  flex: 0 0 70px;
   position: sticky;
   left: 0;
 }

@@ -146,6 +146,14 @@ window.algorithm = {
   async assignpProjects() {
     console.log('assignpProjects')
   },
+  batchComputingTechLastClock() {
+    this.data.technicianList.forEach((x) => this.computingTechLastClock(x))
+    this.data.technicianList.sort((a, b) => {
+      let timeDiff = a.lastClock.relativeTime - b.lastClock.relativeTime
+      if (timeDiff == 0) return this.compareString(a.name, b.name)
+      return timeDiff
+    })
+  },
   computingTechLastClock(technician) {
     let lastClockStartTimeStr
     let lastClockTimeStr = technician.attendanceInfo.startTime
@@ -168,6 +176,7 @@ window.algorithm = {
       }
     })
     let time = this.getTimeByStr(lastClockTimeStr)
+    let computedLunch = false
     if (lastClockStartTimeStr) {
       if (
         lastClockStartTimeStr <= technician.attendanceInfo.lunchTime &&
@@ -178,6 +187,19 @@ window.algorithm = {
         lastRelativeClockTimeStr = this.getTimeStr(time)
       }
     }
+    const timeNowStr = this.getTimeStr(this.getDateNow())
+    // 如果超过了午餐时间 并且 没有计算过午餐时间，修改技师的最后时间
+    if (
+      !computedLunch &&
+      timeNowStr >= technician.attendanceInfo.lunchTime &&
+      // timeNowStr < technician.attendanceInfo.lunchTimeEnd &&
+      technician.attendanceInfo.lunchTimeEnd > lastClockTimeStr
+    ) {
+      time = this.getTimeByStr(technician.attendanceInfo.lunchTimeEnd)
+      // 午餐时间要过单
+      lastRelativeClockTimeStr = technician.attendanceInfo.lunchTimeEnd
+    }
+
     technician.lastClock = {
       timeStr: this.getTimeStr(time),
       time,
@@ -200,7 +222,8 @@ window.algorithm = {
             getTechnicianRequest.onsuccess = (e) => {
               if (e.target.result) {
                 e.target.result.attendanceInfo = cursor.value
-                this.computingTechLastClock(e.target.result)
+                e.target.result.lastClock = {}
+                // this.computingTechLastClock(e.target.result)
                 technicianList.push(e.target.result)
               }
             }
@@ -209,11 +232,12 @@ window.algorithm = {
         }
       }
     })
-    this.data.technicianList = technicianList.sort((a, b) => {
-      let timeDiff = a.lastClock.relativeTime - b.lastClock.relativeTime
-      if (timeDiff == 0) return this.compareString(a.name, b.name)
-      return timeDiff
-    })
+    this.data.technicianList = technicianList
+    // this.data.technicianList = technicianList.sort((a, b) => {
+    //   let timeDiff = a.lastClock.relativeTime - b.lastClock.relativeTime
+    //   if (timeDiff == 0) return this.compareString(a.name, b.name)
+    //   return timeDiff
+    // })
     this.getClockSchedule()
   },
   compareString(a, b) {
@@ -256,6 +280,7 @@ window.algorithm = {
     })
   },
   assign() {
+    this.batchComputingTechLastClock()
     console.time('assign')
     console.time('clone')
     this.tempTechnicianList = this.clone(this.data.technicianList)
@@ -629,6 +654,16 @@ window.algorithm = {
       return diff
     })
   },
+  // 第一个排钟表时间是否大于第二个
+  isGreater(timePositionA, timePositionB) {
+    if (timePositionA.time > timePositionB.time) {
+      return true
+    }
+    if (timePositionA.time < timePositionB.time) {
+      return false
+    }
+    return timePositionA.index > timePositionB.index
+  },
   hasExchangeProject(item, order) {
     // preAssignItem增加字段 delayTime isAdvance.tech lastclock 增加tech.lastClock.assignID
     const exchangeList = []
@@ -638,7 +673,7 @@ window.algorithm = {
       const pOrder = this.data.orderObj[p.orderID]
       if (!pOrder) break
       // 如果已排的项目有开始时间晚于当前项目并且订单时间早于当前项目
-      if (p.timeStart > item.timeStart && pOrder.timePositions[0].time < order.timePositions[0].time) {
+      if (p.timeStart > item.timeStart && this.isGreater(order.timePositions[0], pOrder.timePositions[0])) {
         // 先来先做，如果技师能做的话
         const result = this.findExchangeProjectItem({
           reAssignItem: p,
@@ -649,7 +684,7 @@ window.algorithm = {
         if (result) {
           exchangeList.push(result)
         }
-      } else if (p.timeStart < item.timeStart && pOrder.timePositions[0].time > order.timePositions[0].time) {
+      } else if (p.timeStart < item.timeStart && this.isGreater(pOrder.timePositions[0], order.timePositions[0])) {
         // 如果已排的项目有开始时间早于当前项目并且订单时间晚于当前项目
         const result = this.findExchangeProjectItem({
           reAssignItem: item,
@@ -894,11 +929,11 @@ window.algorithm = {
           .filter(
             (p) =>
               p.workingTableID == workingTableID &&
-              p.technicianID != tech.id &&
+              p.techID != tech.id &&
               !p.fixedTable &&
               !(p.timeStart >= timeEnd || p.timeEnd <= timeStart)
           )
-        const countSet = new Set(matchPreAssignList.map((m) => m.technicianID))
+        const countSet = new Set(matchPreAssignList.map((m) => m.techID))
         if (countSet.size >= freeCount) {
           matchPreAssignList.sort((a, b) => a.timeEnd - b.timeEnd)
           if (matchPreAssignList.length <= freeCount) {
@@ -924,7 +959,7 @@ window.algorithm = {
   },
   // 判断普通的项目是否影响 提前计算 的项目
   judgeAssign(techItem) {
-    let isExisted = this.data.advancTechIDList.includes(techItem.tech.techID)
+    let isExisted = this.data.advancTechIDList.includes(techItem.tech.id)
     if (isExisted) return false
     if (this.data.advancMultiList.length <= 0) return true
     let advancMultiListClone = this.clone(this.data.advancMultiList)
@@ -1099,8 +1134,9 @@ window.algorithm = {
   endAssignItem(assignItem) {
     assignItem.status = 'end'
 
-    assignItem.timeEnd = new Date(Math.max(this.getDateNow(), assignItem.timeEnd))
-    assignItem.timeEndStr = this.getTimeStr(assignItem.timeEnd)
+    // 项目结束时，不修改完成时间，项目完成时间在项目开始的时候就已经确定
+    // assignItem.timeEnd = new Date(Math.max(this.getDateNow(), assignItem.timeEnd))
+    // assignItem.timeEndStr = this.getTimeStr(assignItem.timeEnd)
     assignItem.realTimeEnd = this.getDateNow()
     assignItem.realTimeEndStr = this.getTimeStr(assignItem.realTimeEnd)
 

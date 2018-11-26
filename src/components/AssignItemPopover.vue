@@ -12,7 +12,7 @@
         i.el-icon-caret-right
         | {{assignItem.orderName}}
       .divider
-      .btn-line {{assignItem.number+'/'+assignItem.count+' '+assignItem.projectName+' '+assignItem.timeStartStr+'-'+assignItem.timeEndStr}}
+      .btn-line {{assignItem.number+'/'+assignItem.count+' '+assignItem.projectName+' '+formatTime(assignItem.timeStartStr)+'-'+formatTime(assignItem.timeEndStr)}}
 </template>
 
 <script>
@@ -25,6 +25,22 @@ export default {
     }
   },
   methods: {
+    formatTime(str) {
+      if (!str) return ''
+      let meridiem = 'AM'
+      const array = str.split(':')
+      let hours = parseInt(array[0])
+      const minutes = array[1]
+      if (hours >= 12) {
+        meridiem = 'PM'
+        if (hours > 12) {
+          hours -= 12
+        }
+      } else if (hours == 0) {
+        hours = 12
+      }
+      return `${hours}:${minutes} ${meridiem}`
+    },
     getAssignItemType() {
       if (this.assignItem.status == 'fix') {
         return 'primary'
