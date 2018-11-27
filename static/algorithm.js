@@ -185,6 +185,7 @@ window.algorithm = {
         time = new Date(time.getTime() + technician.attendanceInfo.lunchTimeDuration * 60 * 1000)
         // 午餐时间要过单
         lastRelativeClockTimeStr = this.getTimeStr(time)
+        computedLunch = true
       }
     }
     const timeNowStr = this.getTimeStr(this.getDateNow())

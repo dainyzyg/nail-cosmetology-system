@@ -20,8 +20,29 @@
       .panel-title
         | 排钟表
         el-time-picker.time-now(@change="dateTimeNowChange" v-model="dateTimeNow" size="medium")
-        el-button.manage-btn(@click="manage" type="primary" size="mini") 空格管理
-        el-button.clear-btn(@click="clearScheduleData" type="danger" size="mini") 清空数据
+        el-dropdown.manage-btn(trigger="click" v-if="!showChange")
+          i.el-icon-setting.setting-btn
+          el-dropdown-menu(slot="dropdown")
+            el-dropdown-item
+              el-button(style="width:120px" @click="manage" type="primary") 空格管理
+            .divider
+            .divider
+            .divider
+            el-dropdown-item
+              el-button(style="width:120px" @click="showChange=true" type="success") 交换项目
+            .divider
+            .divider
+            .divider
+            el-dropdown-item
+              el-button(style="width:120px" @click="clearScheduleData" type="danger") 清空数据
+            .divider
+            .divider
+            .divider
+            el-dropdown-item
+              el-button(style="width:120px") 取消
+        template(v-if="showChange")
+          el-button.change-confirm-btn(@click="cancelChange" type="primary" size="mini") 确定交换
+          el-button.change-cancel-btn(@click="cancelChange" size="mini") 取消交换
       .panet-content.schedule-content
         .schedule-time-content
           .schedule-line-time-shadow
@@ -29,6 +50,9 @@
         .schedule-order-content
           .schedule-line(v-for="i in timeList")
             .schedule-line-order(v-for="j in i.orderCount" @click="selectOrder(i.time+'-'+j)")
+              .change-modal(v-if="showChange")
+                i.el-icon-circle-check-outline(v-if="changeList.length<2&&!changeList.includes(i.time+'-'+j)")
+                i.el-icon-circle-check(v-if="changeList.includes(i.time+'-'+j)")
               el-button.schedule-btn(v-if="positionObj[i.time+'-'+j]" slot="reference" :type="getOrderType(positionObj[i.time+'-'+j])" size="medium" plain)
                 .schedule-btn-line
                   .name {{positionObj[i.time+'-'+j].name}}
@@ -45,6 +69,9 @@
               .empty-schedule(v-if="!positionObj[i.time+'-'+j]" )
                 i.el-icon-circle-plus
             .schedule-line-order(v-for="j in getOverFlowOrder(i)" @click="selectOrder(j.position)")
+              .change-modal(v-if="showChange")
+                i.el-icon-circle-check-outline(v-if="changeList.length<2&&!changeList.includes(i.time+'-'+j)")
+                i.el-icon-circle-check(v-if="changeList.includes(i.time+'-'+j)")
               el-button.schedule-btn(slot="reference" :type="getOrderType(j)" size="medium" plain)
                 .schedule-btn-line
                   .name {{j.name}}
@@ -74,6 +101,8 @@ export default {
   },
   data() {
     return {
+      changeList: [],
+      showChange: false,
       timeCountVisible: false,
       dateTimeNow: this.$algorithm.getDateNow(),
       selectedOrder: { orderInfo: [], isArrive: 'notArrive' },
@@ -94,6 +123,10 @@ export default {
     this.$algorithm.initData()
   },
   methods: {
+    cancelChange() {
+      this.showChange = false
+      this.changeList = []
+    },
     formatTime(str) {
       if (!str) return ''
       let meridiem = 'AM'
@@ -362,7 +395,17 @@ export default {
     assign() {
       this.$algorithm.assign()
     },
+    clickChange(id) {
+      if (this.changeList.includes(id)) {
+        this.changeList = this.changeList.filter((x) => x != id)
+      } else if (this.changeList.length < 2) {
+        this.changeList.push(id)
+      }
+    },
     selectOrder(id) {
+      if (this.showChange) {
+        return this.clickChange(id)
+      }
       this.title = id
       if (this.positionObj[this.title]) {
         this.selectedOrder = this.orderObj[this.positionObj[this.title].orderID]
@@ -414,9 +457,14 @@ export default {
   border-radius: 4px;
   border: 2px solid #ebeef5;
 }
+.setting-btn {
+  font-size: 26px;
+  font-weight: bolder;
+  cursor: pointer;
+}
 .add-assign-item {
   position: absolute;
-  right: 4px;
+  left: 4px;
   font-size: 26px;
   font-weight: bolder;
   cursor: pointer;
@@ -495,6 +543,7 @@ export default {
   display: flex;
 }
 .schedule-time-content {
+  z-index: 10;
   flex: 0 0 70px;
   position: sticky;
   left: 0;
@@ -516,7 +565,27 @@ export default {
   color: #409eff;
   height: 80px;
 }
+.change-modal {
+  /* z-index: 10; */
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.05);
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  cursor: pointer;
+}
+.change-modal i {
+  font-size: 26px;
+  font-weight: bolder;
+  color: #909399;
+  position: absolute;
+  right: 5px;
+  top: 5px;
+}
 .schedule-line-order {
+  position: relative;
   margin-left: 4px;
   margin-bottom: 4px;
   overflow: hidden;
@@ -592,9 +661,13 @@ export default {
   position: absolute;
   right: 15px;
 }
-.clear-btn {
+.change-confirm-btn {
   position: absolute;
-  left: 100px;
+  left: 15px;
+}
+.change-cancel-btn {
+  position: absolute;
+  left: 110px;
 }
 .manage-btn {
   position: absolute;
