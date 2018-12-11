@@ -20,7 +20,8 @@ window.algorithm = {
     preAssignList: [],
     advancTechIDList: [],
     advancMultiList: [],
-    remainOrderList: []
+    remainOrderList: [],
+    unmatchOrderList: []
     // techStatus: {} // statue:free busy
   },
   getDateNow() {
@@ -291,6 +292,7 @@ window.algorithm = {
     this.data.advancTechIDList = []
     this.data.advancMultiList = []
     this.data.remainOrderList = []
+    this.data.unmatchOrderList = []
 
     this.tempTastClock = {}
     const { orderList, advanceNowList, advanceList } = this.getOrder()
@@ -338,6 +340,7 @@ window.algorithm = {
     }
     if (technicianTimeList.length <= 0) {
       console.log('没有找到匹配的技师')
+      this.data.unmatchOrderList.push({ order, waitingProjectList })
       return
     }
     // 按相对时间排序（因为小项不过单）如果时间一样，小项优先级最低的做，其他优先级高的做
@@ -408,6 +411,7 @@ window.algorithm = {
     }
     if (technicianTimeList.length <= 0) {
       console.log('没有找到匹配的技师')
+      this.data.unmatchOrderList.push({ order, waitingProjectList: [projectItem] })
       return false
     }
     // 按相对时间排序（因为小项不过单）如果时间一样，小项优先级最低的做，其他优先级高的做
@@ -463,6 +467,7 @@ window.algorithm = {
     }
     if (technicianTimeList.length <= 0) {
       console.log('没有找到匹配的技师')
+      this.data.unmatchOrderList.push({ order, waitingProjectList: [projectItem] })
       return
     }
     // 按相对时间排序（因为小项不过单）如果时间一样，小项优先级最低的做，其他优先级高的做
@@ -568,6 +573,9 @@ window.algorithm = {
         return
       }
     }
+    // 无法匹配
+    // console.log('无法匹配')
+    // this.data.unmatchOrderList.push({ order, waitingProjectList: [projectItem] })
   },
   getDuration({ tech, projectItem }) {
     let duration = 0
@@ -1108,7 +1116,7 @@ window.algorithm = {
       let pX = x.timePositions[0]
       let pY = y.timePositions[0]
       if (pX.time.getTime() == pY.time.getTime()) {
-        return pX.number - pY.number
+        return pX.index - pY.index
       }
       return pX.time - pY.time
     })
@@ -1116,7 +1124,7 @@ window.algorithm = {
       let pX = x.order.timePositions[0]
       let pY = y.order.timePositions[0]
       if (pX.time.getTime() == pY.time.getTime()) {
-        return pX.number - pY.number
+        return pX.index - pY.index
       }
       return pX.time - pY.time
     })
@@ -1125,7 +1133,7 @@ window.algorithm = {
       let pX = x.order.timePositions[0]
       let pY = y.order.timePositions[0]
       if (x.timeStart.getTime() == y.timeStart.getTime()) {
-        return pX.number - pY.number
+        return pX.index - pY.index
       }
       return x.timeStart - y.timeStart
     })

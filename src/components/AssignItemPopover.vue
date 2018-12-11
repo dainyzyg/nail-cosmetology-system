@@ -10,6 +10,8 @@
       .btn-line
         | {{assignItem.techName}}
         i.el-icon-caret-right
+        | {{getPosition(assignItem)}}
+        | /
         | {{assignItem.orderName}}
       .divider
       .btn-line {{assignItem.number+'/'+assignItem.count+' '+assignItem.projectName+' '+formatTime(assignItem.timeStartStr)+'-'+formatTime(assignItem.timeEndStr)}}
@@ -18,13 +20,23 @@
 <script>
 export default {
   props: ['assignItem', 'activeAssignTab', 'index'],
-  created() {},
+  created() { },
   data() {
     return {
       visible: false
     }
   },
   methods: {
+    getPosition(assignItem) {
+      let order = this.$algorithm.data.orderObj[assignItem.orderID]
+      if (order && order.timePositions.length >= assignItem.number) {
+        let time = order.timePositions[assignItem.number - 1].time
+        let index = order.timePositions[assignItem.number - 1].index
+        let position = time.toLocaleTimeString('en').replace(/:00 [AP]M$/, '')
+        return `${position}-${index}`
+      }
+      return ''
+    },
     formatTime(str) {
       if (!str) return ''
       let meridiem = 'AM'

@@ -23,7 +23,7 @@
 <script>
 export default {
   props: ['data', 'dataTime'],
-  created() {},
+  created() { },
   data() {
     return {
       zoom: '300%'
@@ -56,7 +56,23 @@ export default {
     getTimeString(date) {
       const hours = date.getHours()
       const minutes = date.getMinutes()
-      return `${hours}:${minutes}`
+      return this.formatTime(`${hours}:${minutes}`)
+    },
+    formatTime(str) {
+      if (!str) return ''
+      let meridiem = 'AM'
+      const array = str.split(':')
+      let hours = parseInt(array[0])
+      const minutes = array[1]
+      if (hours >= 12) {
+        meridiem = 'PM'
+        if (hours > 12) {
+          hours -= 12
+        }
+      } else if (hours == 0) {
+        hours = 12
+      }
+      return `${hours}:${minutes} ${meridiem}`
     },
     getOrderInfo(pi) {
       const list = []

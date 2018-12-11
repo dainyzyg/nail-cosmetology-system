@@ -9,6 +9,12 @@
     .panel.assign_list
       .panel-title 预分配
       .panet-content
+        .unmatch-item(v-for="i in unmatchOrderList")
+          .btn-line
+            i.el-icon-error
+            | {{i.position}} / {{i.orderName}}
+          .divider
+          .btn-line {{i.number}}/{{i.count}} {{i.projects}}
         AssignItemPopover(v-for="i,index in data.preAssignList" :key="i.id" :assignItem="i" :index="index")
     .panel.assign_list
       .panel-title
@@ -19,7 +25,7 @@
     .panel.clock-schedule
       .panel-title
         | 排钟表
-        el-time-picker.time-now(@change="dateTimeNowChange" v-model="dateTimeNow" size="medium")
+        el-time-picker.time-now(format="hh:mm:ss A" @change="dateTimeNowChange" v-model="dateTimeNow" size="medium")
         el-dropdown.manage-btn(trigger="click" v-if="!showChange")
           i.el-icon-setting.setting-btn
           el-dropdown-menu(slot="dropdown")
@@ -41,7 +47,7 @@
             el-dropdown-item
               el-button(style="width:120px") 取消
         template(v-if="showChange")
-          el-button.change-confirm-btn(@click="cancelChange" type="primary" size="mini") 确定交换
+          el-button.change-confirm-btn(@click="comfirmChange" type="primary" size="mini") 确定交换
           el-button.change-cancel-btn(@click="cancelChange" size="mini") 取消交换
       .panet-content.schedule-content
         .schedule-time-content
@@ -51,7 +57,7 @@
           .schedule-line(v-for="i in timeList")
             .schedule-line-order(v-for="j in i.orderCount" @click="selectOrder(i.time+'-'+j)")
               .change-modal(v-if="showChange")
-                i.el-icon-circle-check-outline(v-if="changeList.length<2&&!changeList.includes(i.time+'-'+j)")
+                i.el-icon-circle-check-outline(v-if="(!positionObj[i.time+'-'+j]||positionObj[i.time+'-'+j].number==1)&&changeList.length<2&&!changeList.includes(i.time+'-'+j)")
                 i.el-icon-circle-check(v-if="changeList.includes(i.time+'-'+j)")
               el-button.schedule-btn(v-if="positionObj[i.time+'-'+j]" slot="reference" :type="getOrderType(positionObj[i.time+'-'+j])" size="medium" plain)
                 .schedule-btn-line
@@ -70,7 +76,7 @@
                 i.el-icon-circle-plus
             .schedule-line-order(v-for="j in getOverFlowOrder(i)" @click="selectOrder(j.position)")
               .change-modal(v-if="showChange")
-                i.el-icon-circle-check-outline(v-if="changeList.length<2&&!changeList.includes(i.time+'-'+j)")
+                i.el-icon-circle-check-outline(v-if="(!positionObj[j.position]||positionObj[j.position].number==1)&&changeList.length<2&&!changeList.includes(i.time+'-'+j)")
                 i.el-icon-circle-check(v-if="changeList.includes(i.time+'-'+j)")
               el-button.schedule-btn(slot="reference" :type="getOrderType(j)" size="medium" plain)
                 .schedule-btn-line
@@ -82,7 +88,7 @@
                     .project-tech {{getDesignatedTech(k.technicians)}}
             //- .add-schedule
             //-     i.el-icon-circle-plus-outline
-    OrderModal(:visible.sync="orderVisible" :title="title" :data="selectedOrder" @save="orderSave" @delete="deleteOrder")
+    OrderModal(:visible.sync="orderVisible" :technicianList="technicianList" :title="title" :data="selectedOrder" @save="orderSave" @delete="deleteOrder")
     AssignModal(:visible.sync="assignVisible")
     TimeCountManageModal(:visible.sync="timeCountVisible" :data="data")
 </template>
@@ -123,6 +129,143 @@ export default {
     this.$algorithm.initData()
   },
   methods: {
+    comfirmChange() {
+      // orderObj -- timePositions
+      // positionObj
+      if (this.changeList.length != 2) {
+        this.$message({
+          showClose: true,
+          message: '请选择两个项目！',
+          type: 'error'
+        })
+        return
+      }
+      if (!this.positionObj[this.changeList[0]] && !this.positionObj[this.changeList[1]]) {
+        this.$message({
+          showClose: true,
+          message: '不能交换两个空位！',
+          type: 'error'
+        })
+        return
+      }
+      // 排序
+      this.changeList.sort((x, y) => {
+        let timeStrX = x.split('-')[0]
+        let indexX = parseInt(x.split('-')[1])
+        let timeStrY = y.split('-')[0]
+        let indexY = parseInt(y.split('-')[1])
+        if (timeStrX == timeStrY) {
+          return indexX - indexY
+        }
+        if (timeStrX > timeStrY) {
+          return 1
+        }
+        return -1
+      })
+      // 记录orderID,清除数据
+      let orderIDA, orderIDB
+      if (this.positionObj[this.changeList[0]]) {
+        orderIDB = this.positionObj[this.changeList[0]].orderID
+        this.orderObj[orderIDB].timePositions.forEach((x) => {
+          delete this.positionObj[x.position]
+        })
+      }
+      if (this.positionObj[this.changeList[1]]) {
+        orderIDA = this.positionObj[this.changeList[1]].orderID
+        this.orderObj[orderIDA].timePositions.forEach((x) => {
+          delete this.positionObj[x.position]
+        })
+      }
+
+      console.log(this.changeList)
+      let oldPositions = this.placingOrder(orderIDA, this.changeList[0])
+      oldPositions = [...oldPositions, ...this.placingOrder(orderIDB, this.changeList[1])]
+      oldPositions.sort((x, y) => {
+        if (x.time.getTime() == y.time.getTime()) {
+          return x.index - y.index
+        }
+        return x.time - y.time
+      })
+      this.judgeMove(oldPositions)
+      this.showChange = false
+      this.changeList = []
+      this.assign()
+      this.saveDB()
+    },
+    placingOrder(orderID, position) {
+      if (!orderID) return []
+      let order = this.orderObj[orderID]
+      let oldPositions = [...order.timePositions]
+
+      const count = order.orderInfo.length
+      const hour = parseInt(position.split('-')[0].split(':')[0])
+      const minute = parseInt(position.split('-')[0].split(':')[1])
+      const timeFirst = new Date(this.dateStart.getTime() + (hour * 60 + minute) * 60 * 1000)
+      const timePositions = [
+        {
+          time: timeFirst,
+          timeStr: timeFirst.toLocaleTimeString('en-GB').replace(/:00$/, ''),
+          position: position,
+          number: 1,
+          count,
+          index: parseInt(position.split('-')[1])
+        }
+      ]
+
+      for (let i = 1; i < count; i++) {
+        const prevTimePosition = timePositions[timePositions.length - 1]
+        let time = new Date(prevTimePosition.time.getTime() + this.projectDuration * 60 * 1000)
+        let findPosition = false
+        let index = 1
+        while (!findPosition) {
+          let timeItem = this.timeList.find((x) => x.time == time.toLocaleTimeString('en-GB').replace(/:00$/, ''))
+          if (!timeItem) {
+            throw new Error('可用空间不足，无法分配项目！')
+          }
+          if (index > timeItem.orderCount) {
+            time = new Date(time.getTime() + this.intervals * 60 * 1000)
+            index = 1
+          }
+          if (time >= this.workEndTime) {
+            throw new Error('可用空间不足，无法分配项目！')
+          }
+          const position = time.toLocaleTimeString('en-GB').replace(/:00$/, '') + '-' + index
+          if (this.positionObj[position]) {
+            index += 1
+          } else {
+            findPosition = true
+            timePositions.push({
+              time,
+              timeStr: time.toLocaleTimeString('en-GB').replace(/:00$/, ''),
+              position,
+              number: i + 1,
+              count,
+              index
+            })
+          }
+        }
+      }
+
+      const projects = this.getProjects(order)
+      timePositions.forEach((i) => {
+        this.positionObj[i.position] = {
+          name: order.name,
+          orderID: order.id,
+          isArrive: order.isArrive,
+          projects,
+          ...i
+        }
+        if (i.index > this.positionObj.maxIndex) {
+          this.positionObj.maxIndex = i.index
+        }
+      })
+      order.timePositions = timePositions
+      // this.$set(this.orderObj, order.id, order)
+      // 响应式 this.orderObj[this.selectedOrder.id] = this.selectedOrder
+      // this.judgeMove(oldPositions)
+      // this.orderVisible = false
+      return oldPositions
+    },
     cancelChange() {
       this.showChange = false
       this.changeList = []
@@ -396,6 +539,9 @@ export default {
       this.$algorithm.assign()
     },
     clickChange(id) {
+      if (this.positionObj[id] && this.positionObj[id].number != 1) {
+        return
+      }
       if (this.changeList.includes(id)) {
         this.changeList = this.changeList.filter((x) => x != id)
       } else if (this.changeList.length < 2) {
@@ -417,6 +563,20 @@ export default {
     }
   },
   computed: {
+    unmatchOrderList() {
+      // let unmatchOrderList = [...new Set(this.data.unmatchOrderList)]
+      return this.data.unmatchOrderList.map(x => {
+        let r = {}
+        r.projects = x.waitingProjectList.map(m => m.project.name).join(',')
+        r.count = x.order.orderInfo.length
+        r.number = x.order.orderInfo.filter(f => f.assignItemID).length + 1
+        r.orderName = x.order.name
+        let index = x.order.timePositions[r.number - 1].index
+        let position = x.order.timePositions[r.number - 1].time.toLocaleTimeString('en').replace(/:00 [AP]M$/, '')
+        r.position = `${position}-${index}`
+        return r
+      })
+    },
     orderObj() {
       return this.data.orderObj
     },
@@ -456,6 +616,22 @@ export default {
   margin-bottom: 10px;
   border-radius: 4px;
   border: 2px solid #ebeef5;
+}
+.unmatch-item {
+  height: 43px;
+  cursor: pointer;
+  margin-top: 1px;
+  flex: 1;
+  padding: 7px 6px;
+  /* border-radius: 4px; */
+  border-top-right-radius: 4px;
+  border-top-left-radius: 4px;
+  color: #ffffff;
+  overflow: hidden;
+  background: #909399;
+}
+.unmatch-item:hover {
+  opacity: 0.8;
 }
 .setting-btn {
   font-size: 26px;
@@ -583,6 +759,15 @@ export default {
   position: absolute;
   right: 5px;
   top: 5px;
+}
+.unmatch-item .el-icon-error {
+  margin-right: 5px;
+  font-size: 16px;
+}
+.btn-line {
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
 }
 .schedule-line-order {
   position: relative;

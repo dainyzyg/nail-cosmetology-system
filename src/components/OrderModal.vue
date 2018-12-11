@@ -53,6 +53,9 @@ export default {
     data: {
       default: {}
     },
+    technicianList: {
+      default: {}
+    },
     title: {
       default: ''
     },
@@ -61,7 +64,7 @@ export default {
     }
   },
   created() {
-    this.getKindList('technician', 'technicianList')
+    // this.getKindList('technician', 'technicianList')
     this.getKindList('kind', 'kindList')
   },
   data() {
@@ -76,8 +79,8 @@ export default {
       selectedTechnicians: [],
       kindList: [],
       projectList: [],
-      additionList: [],
-      technicianList: []
+      additionList: []
+      // technicianList: []
     }
   },
   methods: {

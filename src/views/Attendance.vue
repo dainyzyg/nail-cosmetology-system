@@ -11,7 +11,7 @@
         el-table-column(prop="name" label="姓名")
         el-table-column(align="center" label="午餐时间" width="150")
           template(slot-scope='scope')
-            el-time-select(style="width:120px" :picker-options="pickerOpions" v-model="attendanceInfo[scope.row.id].lunchTime" @change="saveAttendance(attendanceInfo[scope.row.id])")
+            el-time-select(format="hh:mm:ss A" style="width:120px" :picker-options="pickerOpions" v-model="attendanceInfo[scope.row.id].lunchTime" @change="saveAttendance(attendanceInfo[scope.row.id])")
         el-table-column(align="center" label="午餐时长" width="160")
           template(slot-scope='scope')
             //- el-input-number(style="width:130px" v-model="attendanceInfo[scope.row.id].lunchTimeDuration")
