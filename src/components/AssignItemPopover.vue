@@ -15,6 +15,9 @@
         | {{assignItem.orderName}}
       .divider
       .btn-line {{assignItem.number+'/'+assignItem.count+' '+assignItem.projectName+' '+formatTime(assignItem.timeStartStr)+'-'+formatTime(assignItem.timeEndStr)}}
+      template(v-if="$attrs.assign && getUndoProjects()")
+        .divider
+        .btn-line 未做项目:{{getUndoProjects()}}
 </template>
 
 <script>
@@ -27,6 +30,13 @@ export default {
     }
   },
   methods: {
+    getUndoProjects() {
+      let order = this.$algorithm.data.orderObj[this.assignItem.orderID]
+      if (order) {
+        return order.orderInfo.filter(f => !f.assignItemID).map(m => m.project.name).join(' ')
+      }
+      return ''
+    },
     getPosition(assignItem) {
       let order = this.$algorithm.data.orderObj[assignItem.orderID]
       if (order && order.timePositions.length >= assignItem.number) {

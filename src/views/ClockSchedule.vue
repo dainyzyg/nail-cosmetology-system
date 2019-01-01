@@ -21,7 +21,7 @@
         | 已分配
         i.el-icon-circle-plus-outline.add-assign-item(@click="assignVisible=true")
       .panet-content
-        AssignItemPopover(v-for="i,index in data.assignList" :key="i.id" :assignItem="i" :index="index")
+        AssignItemPopover(assign v-for="i,index in data.assignList" :key="i.id" :assignItem="i" :index="index")
     .panel.clock-schedule
       .panel-title
         | 排钟表
@@ -55,7 +55,7 @@
             .schedule-line-time(v-for="i in timeList") {{formatTime(i.time)}}
         .schedule-order-content
           .schedule-line(v-for="i in timeList")
-            .schedule-line-order(v-for="j in i.orderCount" @click="selectOrder(i.time+'-'+j)")
+            .schedule-line-order(v-for="j in getOrderCount(i)" @click="selectOrder(i.time+'-'+j)")
               .change-modal(v-if="showChange")
                 i.el-icon-circle-check-outline(v-if="(!positionObj[i.time+'-'+j]||positionObj[i.time+'-'+j].number==1)&&changeList.length<2&&!changeList.includes(i.time+'-'+j)")
                 i.el-icon-circle-check(v-if="changeList.includes(i.time+'-'+j)")
@@ -527,11 +527,49 @@ export default {
         this.orderSave('temp')
       }
     },
+    getOrderCount(timeItem) {
+      // if (timeItem.time == '20:45') debugger
+      // console.log({ timeItem }, timeItem.orderCount)
+      let orderCount = timeItem.orderCount
+      let smallCount = Object.keys(this.positionObj)
+        .filter(x => {
+          try {
+            if (this.positionObj[x].timeStr == timeItem.time && this.positionObj[x].index <= orderCount) {
+              let positionItem = this.positionObj[x]
+              let order = this.orderObj[positionItem.orderID]
+              let kind = order.orderInfo[positionItem.number - 1].kind
+              if (kind.orderRule == '由后到前') {
+                return true
+              }
+            }
+          } catch (e) { }
+          return false
+        }).length
+
+      while (smallCount > 0) {
+        let count = 0
+        for (let i = orderCount + 1; i <= smallCount + orderCount; i++) {
+          let positionItem = this.positionObj[`${timeItem.time}-${i}`]
+          if (positionItem) {
+            try {
+              let order = this.orderObj[positionItem.orderID]
+              let kind = order.orderInfo[positionItem.number - 1].kind
+              if (kind.orderRule == '由后到前') {
+                count += 1
+              }
+            } catch (e) { }
+          }
+        }
+        orderCount += smallCount
+        smallCount = count
+      }
+      return orderCount
+    },
     getOverFlowOrder(timeItem) {
       // 根据maxIndex 依次寻找溢出的项目
       // 或者用Object.keys()也可以一试
       return Object.keys(this.positionObj)
-        .filter((x) => this.positionObj[x].timeStr == timeItem.time && this.positionObj[x].index > timeItem.orderCount)
+        .filter((x) => this.positionObj[x].timeStr == timeItem.time && this.positionObj[x].index > this.getOrderCount(timeItem))
         .sort((a, b) => this.positionObj[a].index - this.positionObj[b].index)
         .map((x) => this.positionObj[x])
     },

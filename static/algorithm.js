@@ -282,6 +282,8 @@ window.algorithm = {
     })
   },
   assign() {
+    this.data.assignList.sort((a, b) => b.timeEnd.getTime() - a.timeEnd.getTime())
+
     this.batchComputingTechLastClock()
     console.time('assign')
     console.time('clone')
@@ -1320,7 +1322,7 @@ window.algorithm = {
     return parseInt(timeStr)
   },
   init(Vue) {
-    this.initData()
+    // this.initData()
     // setInterval(() => {
     //   window.algorithm.timeDuration += 1000 * 60
     //   this.assignpProjects()
