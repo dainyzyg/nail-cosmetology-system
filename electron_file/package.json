@@ -1,0 +1,12 @@
+{
+  "name": "nail-cosmetology-system",
+  "version": "1.0.0",
+  "description": "美甲系统",
+  "main": "main.js",
+  "dependencies": {
+    "koa": "^2.4.1",
+    "koa-bodyparser": "^4.2.0",
+    "koa-router": "^7.3.0",
+    "socket.io": "^2.1.0"
+  }
+}

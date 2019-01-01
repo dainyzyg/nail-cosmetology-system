@@ -36,6 +36,7 @@ module.exports = {
     'arrow-body-style': 'off',
     'dot-notation': 'off',
     'no-param-reassign': 'off',
+    'standard/no-callback-literal': 'off',
     eqeqeq: 'off'
   }
 }
