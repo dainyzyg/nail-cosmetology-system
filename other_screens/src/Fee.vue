@@ -301,10 +301,10 @@ export default {
   display: flex;
   justify-content: space-between;
 }
-.info-title {
+/* .info-title {
 }
 .info-value {
-}
+} */
 .total {
   border-top: 1px dashed slategray;
 }

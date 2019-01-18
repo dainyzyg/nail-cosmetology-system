@@ -35,8 +35,8 @@ export default {
   },
   methods: {
     getTechnician(data) {
-      const item = data.preAssignItems.find((x) => x.projectID == data.project.id)
-      return item.technicianName
+      // const item = data.preAssignItems.find((x) => x.projectID == data.project.id)
+      return data.technicianName
     }
   },
   computed: {

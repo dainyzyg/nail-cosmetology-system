@@ -10,6 +10,7 @@ import Attendance from '@/views/Attendance'
 import Setting from '@/views/Setting'
 import Screen from '@/views/Screen'
 import Fee from '@/views/Fee'
+import Report from '@/views/Report'
 import Server from '@/views/Server'
 import ClockSchedule from '@/views/ClockSchedule'
 import WorkingTable from '@/views/WorkingTable'
@@ -20,6 +21,7 @@ export default new Router({
   routes: [
     { path: '/', redirect: '/clockschedule' },
     { path: '/order', component: Order },
+    { path: '/report', component: Report },
     { path: '/assign', component: Assign },
     { path: '/technician', component: Technician },
     { path: '/project', component: Project },

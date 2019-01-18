@@ -1,8 +1,10 @@
 <template lang="pug">
   .page
     el-form(label-width="200px")
-      el-form-item(label="当前时间")
-        el-time-picker(v-model="dateTimeNow")
+      //- el-form-item(label="当前时间")
+      //-   el-time-picker(v-model="dateTimeNow")
+      el-form-item(label='保底小费比例%')
+        el-input-number(v-model="miniFeePercent" :min="0" :max="100")
       el-form-item(label='必做提前计算时间')
         el-input-number(v-model="doAdvanceTime")
       //- el-form-item(label='用户等待时间')
@@ -30,6 +32,7 @@
 </template>
 <script>
 const timeArray = [
+  'miniFeePercent',
   'doAdvanceTime',
   'designatedTechAdvanceTime',
   'doDelayTime',
@@ -60,7 +63,7 @@ export default {
       dateTimeNow: localStorage.dateTimeNow ? new Date(localStorage.dateTimeNow) : new Date('2018/2/27')
     }
   },
-  created() {},
+  created() { },
   methods: {},
   watch: {
     ...watch,

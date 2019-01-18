@@ -26,7 +26,7 @@ export default {
       default: false
     }
   },
-  created() {},
+  created() { },
   data() {
     return {
       order: [],
@@ -62,8 +62,12 @@ export default {
           const itemNumber = item.number || 0
           if (lastNumber < itemNumber) lastNumber = itemNumber
         }
+        // 计算价钱和技师提成
+        const accountAndCommission = this.$algorithm.getAccountAndCommission({ tech, projectItem })
+
         const item = {
           id: this.$getNewID,
+          accountAndCommission,
           techName: tech.name,
           techID: tech.id,
           orderName: order.name,

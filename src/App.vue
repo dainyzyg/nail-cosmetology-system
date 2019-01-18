@@ -2,12 +2,15 @@
   .page-wraper.flex
     .nav-menu
       el-menu.menu(:default-active='$router.currentRoute.path', :router='true', background-color='#304156', text-color='#a7b1c2', active-text-color='#fff')
-        //- el-menu-item(index='/order')
-        //-   i.el-icon-tickets
-        //-   span(slot='title') 订单管理
         el-menu-item(index='/clockschedule')
           i.el-icon-time
           span(slot='title') 排钟表
+        el-menu-item(index='/order')
+          i.el-icon-tickets
+          span(slot='title') 结账
+        el-menu-item(index='/report')
+          i.el-icon-document
+          span(slot='title') 报表
         el-menu-item(index='/assign')
           i.el-icon-time
           span(slot='title') 排钟查看
@@ -59,7 +62,7 @@ export default {
 .menu .is-active {
   background-color: #263445 !important;
 }
-.el-menu-item [class^='el-icon-'] {
+.el-menu-item [class^="el-icon-"] {
   font-size: 20px;
   font-weight: bold;
   padding-top: 1px;

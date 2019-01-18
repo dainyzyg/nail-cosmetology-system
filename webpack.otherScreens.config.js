@@ -4,7 +4,8 @@ module.exports = {
   entry: {
     big: './other_screens/src/big.js',
     fee: './other_screens/src/fee.js',
-    dev: './other_screens/src/dev.js'
+    dev: './other_screens/src/dev.js',
+    print: './other_screens/src/print.js'
   },
   module: {
     rules: [

@@ -452,6 +452,18 @@ export default {
       })
       if (r != 'confirm') return
       await window.IDB.delete('schedule', this.dateStart)
+      // 删除 结账表checkoutList
+      await this.$IDB.executeTransaction(['checkoutList'], 'readwrite', (t) => {
+        const store = t.objectStore('checkoutList')
+        const request = store.index('date').getAllKeys(this.dateStart)
+        request.onsuccess = (event) => {
+          const result = event.target.result
+          if (result) {
+            result.forEach(key => store.delete(key))
+          }
+        }
+      })
+      console.log('delete checkoutList success')
       this.$algorithm.initData()
     },
     judgeMove(oldPositions) {

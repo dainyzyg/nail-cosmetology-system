@@ -32,16 +32,16 @@ const IDB = {
     const m = mode || 'readonly'
     return new Promise((resolve, reject) => {
       const t = db.transaction(storeNames, m)
-      t.onerror = (e) => {
+      t.onerror = e => {
         console.log('t error')
         console.log(e)
         reject(e)
       }
-      t.onabort = (e) => {
+      t.onabort = e => {
         console.log('t abort')
         reject(e)
       }
-      t.oncomplete = (e) => {
+      t.oncomplete = e => {
         resolve(1)
       }
       cb(t)
@@ -51,10 +51,10 @@ const IDB = {
     const store = await this.getObjectStore(osName, 'readwrite')
     return new Promise((resolve, reject) => {
       const request = store.delete(id)
-      request.onerror = (e) => {
+      request.onerror = e => {
         reject(e)
       }
-      request.onsuccess = (event) => {
+      request.onsuccess = event => {
         resolve(1)
       }
     })
@@ -63,10 +63,10 @@ const IDB = {
     const store = await this.getObjectStore(osName, 'readwrite')
     return new Promise((resolve, reject) => {
       const request = store.add(record)
-      request.onerror = (e) => {
+      request.onerror = e => {
         reject(e)
       }
-      request.onsuccess = (event) => {
+      request.onsuccess = event => {
         resolve(1)
       }
     })
@@ -80,10 +80,10 @@ const IDB = {
       } else {
         request = store.put(record)
       }
-      request.onerror = (e) => {
+      request.onerror = e => {
         reject(e)
       }
-      request.onsuccess = (event) => {
+      request.onsuccess = event => {
         resolve(1)
       }
     })
@@ -92,10 +92,10 @@ const IDB = {
     const store = await this.getObjectStore(osName)
     return new Promise((resolve, reject) => {
       const request = store.get(value)
-      request.onerror = (e) => {
+      request.onerror = e => {
         reject(e)
       }
-      request.onsuccess = (e) => {
+      request.onsuccess = e => {
         resolve(e.target.result)
       }
     })
@@ -104,10 +104,22 @@ const IDB = {
     const store = await this.getObjectStore(osName)
     return new Promise((resolve, reject) => {
       const request = store.getAll()
-      request.onerror = (e) => {
+      request.onerror = e => {
         reject(e)
       }
-      request.onsuccess = (e) => {
+      request.onsuccess = e => {
+        resolve(e.target.result)
+      }
+    })
+  },
+  async getAllByIndex(osName, indexName, query = null) {
+    const store = await this.getObjectStore(osName)
+    return new Promise((resolve, reject) => {
+      const request = store.index(indexName).getAll(query)
+      request.onerror = e => {
+        reject(e)
+      }
+      request.onsuccess = e => {
         resolve(e.target.result)
       }
     })
@@ -126,7 +138,7 @@ const IDB = {
       request.onerror = () => {
         reject(new Error('通过游标获取数据报错'))
       }
-      request.onsuccess = (event) => {
+      request.onsuccess = event => {
         const cursor = event.target.result
         if (cb && cursor) {
           if (cb(cursor)) {
@@ -150,7 +162,7 @@ const IDB = {
       request.onerror = () => {
         reject(new Error('通过游标获取数据报错'))
       }
-      request.onsuccess = (event) => {
+      request.onsuccess = event => {
         const cursor = event.target.result
         if (cursor) {
           datalist.push(cursor.value)
@@ -169,7 +181,7 @@ const IDB = {
       request.onerror = () => {
         reject(new Error('通过游标获取数据报错'))
       }
-      request.onsuccess = (event) => {
+      request.onsuccess = event => {
         const cursor = event.target.result
         if (cursor) {
           datalist.push(cursor.value)
@@ -227,17 +239,17 @@ function initIndexedDB(Vue) {
       return IDB
     }
   })
-  const openRequest = indexedDB.open('MyDatabase', 15)
-  openRequest.onerror = (event) => {
+  const openRequest = indexedDB.open('MyDatabase', 16)
+  openRequest.onerror = event => {
     console.log(event, event.target.error.message)
   }
-  openRequest.onsuccess = (event) => {
+  openRequest.onsuccess = event => {
     IDB.db = event.target.result
     for (const c of IDB.cb) {
       c()
     }
   }
-  openRequest.onupgradeneeded = (event) => {
+  openRequest.onupgradeneeded = event => {
     createStoreAndIndex(event, 'kind', [], { keyPath: 'id' })
     createStoreAndIndex(event, 'project', ['parentID'], { keyPath: 'id' })
     createStoreAndIndex(event, 'addition', ['parentID'], { keyPath: 'id' })
@@ -250,6 +262,7 @@ function initIndexedDB(Vue) {
     createStoreAndIndex(event, 'devData', [], { keyPath: 'name' })
     createStoreAndIndex(event, 'schedule', [], { keyPath: 'date' })
     createStoreAndIndex(event, 'workingTable', [], { keyPath: 'id' })
+    createStoreAndIndex(event, 'checkoutList', ['date'], { keyPath: 'id' })
   }
 }
 window.IDB = IDB
