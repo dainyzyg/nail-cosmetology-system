@@ -34,7 +34,7 @@
           span(slot='title') 工作台设置
         el-menu-item(index='/setting')
           i.el-icon-setting
-          span(slot='title') 参数设置
+          span(slot='title') 设置
         el-menu-item(index='/server')
           i.el-icon-upload
           span(slot='title') 服务器

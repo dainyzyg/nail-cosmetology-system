@@ -14,6 +14,9 @@ import Report from '@/views/Report'
 import Server from '@/views/Server'
 import ClockSchedule from '@/views/ClockSchedule'
 import WorkingTable from '@/views/WorkingTable'
+import ParameterSettings from '@/views/ParameterSettings'
+import WaitingConfig from '@/views/WaitingConfig'
+import RateConfig from '@/views/RateConfig'
 
 Vue.use(Router)
 
@@ -27,7 +30,16 @@ export default new Router({
     { path: '/project', component: Project },
     { path: '/projectold', component: ProjectOld },
     { path: '/attendance', component: Attendance },
-    { path: '/setting', component: Setting },
+    {
+      path: '/setting',
+      component: Setting,
+      children: [
+        { path: 'parameterSettings', component: ParameterSettings },
+        { path: 'waitingConfig', component: WaitingConfig },
+        { path: 'rateConfig', component: RateConfig },
+        { path: '', redirect: 'parameterSettings' }
+      ]
+    },
     { path: '/screen', component: Screen },
     { path: '/fee', component: Fee },
     { path: '/server', component: Server },

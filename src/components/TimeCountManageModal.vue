@@ -8,7 +8,7 @@
         span {{scope.row.originalCount||scope.row.orderCount}}
     el-table-column(align="center" label="添加数量")
       template(slot-scope='scope')
-        el-input-number(size="medium" v-model="scope.row.addCount" :precision="0" :min="0" @change="change(scope.row)")
+        el-input-number(size="medium" v-model="scope.row.addCount" :precision="0" :min="0" @change="change(scope.row,$event)")
 </template>
 
 <script>
@@ -21,18 +21,21 @@ export default {
       default: false
     }
   },
-  created() {},
+  created() { },
   data() {
     return {
       dialogVisible: false
     }
   },
   methods: {
-    change(row) {
-      console.log(row)
+    change(row, e) {
+      if (isNaN(e)) {
+        return
+      }
       if (!row.originalCount) {
         row.originalCount = row.orderCount
       }
+      row.addCount = e
       row.orderCount = row.originalCount + row.addCount
       this.data.customTimeCountObj[row.time] = row.addCount
     }
@@ -46,6 +49,7 @@ export default {
       if (val) {
       }
       this.$emit('update:visible', val)
+      this.$algorithm.saveScheduleData()
     }
   }
 }

@@ -157,6 +157,9 @@
 //
 //
 //
+//
+//
+//
 
 
 /* harmony default export */ __webpack_exports__["a"] = ({
@@ -185,6 +188,19 @@
   },
 
   methods: {
+    getTip: function getTip(p) {
+      console.log(p.subsidy, p);
+      if (p.subsidy > 0) {
+        return p.tip + '+' + p.subsidy;
+      }
+      return p.tip;
+    },
+    getWaitingForProject: function getWaitingForProject(_ref) {
+      var waitforAssianItem = _ref.waitforAssianItem;
+
+      if (!waitforAssianItem) return '无';
+      return waitforAssianItem.orderName + '-' + waitforAssianItem.projectName;
+    },
     correctNum: function correctNum(val) {
       if (isNaN(val)) {
         return NaN;
@@ -226,10 +242,10 @@
   },
   computed: {
     commissionAccountTotal: function commissionAccountTotal() {
-      return this.fixed2(this.aggregatedData.commissionAccountTotal);
+      return this.correctNum(this.aggregatedData.commissionAccountTotal);
     },
     profits: function profits() {
-      return this.fixed2(this.aggregatedData.paytotals - this.aggregatedData.tips - this.correctNum(this.aggregatedData.commissionAccountTotal));
+      return this.correctNum(this.aggregatedData.projectPrices - this.aggregatedData.subsidyTotal - this.aggregatedData.waitingPriceTotal - this.aggregatedData.commissionAccountTotal);
     }
   },
   watch: {}
@@ -419,10 +435,14 @@ var render = function() {
                     [
                       _vm._v(
                         "营业总数:$" +
-                          _vm._s(_vm.aggregatedData.paytotals) +
+                          _vm._s(_vm.aggregatedData.projectPrices) +
                           " 提成总数:$" +
                           _vm._s(_vm.commissionAccountTotal) +
-                          " 利润总数:" +
+                          " 小费补贴:$" +
+                          _vm._s(_vm.aggregatedData.subsidyTotal) +
+                          " 等待费用:$" +
+                          _vm._s(_vm.aggregatedData.waitingPriceTotal) +
+                          " 利润总数:$" +
                           _vm._s(_vm.profits)
                       )
                     ]
@@ -457,11 +477,20 @@ var render = function() {
                             " 提成总数:$" +
                             _vm._s(_vm.fixed2(i.commissionTotal)) +
                             " 小费总数:$" +
-                            _vm._s(i.tips) +
+                            _vm._s(i.tips + i.subsidys) +
+                            " 等待费用:$" +
+                            _vm._s(i.waitingPriceTotal || 0) +
                             " 平均星级:" +
                             _vm._s((i.rates / i.count).toFixed(2)) +
                             " 技师收入:$" +
-                            _vm._s(_vm.fixed2(i.commissionTotal + i.tips))
+                            _vm._s(
+                              _vm.correctNum(
+                                i.commissionTotal +
+                                  i.tips +
+                                  i.subsidys +
+                                  (i.waitingPriceTotal || 0)
+                              )
+                            )
                         )
                       ]
                     )
@@ -487,31 +516,55 @@ var render = function() {
                 ),
                 _c(
                   "tbody",
-                  _vm._l(i.projectList, function(p) {
-                    return _c("tr", [
-                      _c("td", { staticClass: "align-center" }, [
-                        _vm._v(_vm._s(p.orderName))
-                      ]),
-                      _c("td", { staticClass: "align-right" }, [
-                        _vm._v(_vm._s(p.projectPrice))
-                      ]),
-                      _c("td", { staticClass: "align-right" }, [
-                        _vm._v(
-                          _vm._s(
-                            _vm.fixed2(
-                              p.accountAndCommission.commissionAccountTotal
+                  [
+                    _vm._l(i.projectList, function(p) {
+                      return _c("tr", [
+                        _c("td", { staticClass: "align-center" }, [
+                          _vm._v(_vm._s(p.orderName))
+                        ]),
+                        _c("td", { staticClass: "align-right" }, [
+                          _vm._v(_vm._s(p.projectPrice))
+                        ]),
+                        _c("td", { staticClass: "align-right" }, [
+                          _vm._v(
+                            _vm._s(
+                              _vm.fixed2(
+                                p.accountAndCommission.commissionAccountTotal
+                              )
                             )
                           )
-                        )
-                      ]),
-                      _c("td", { staticClass: "align-right" }, [
-                        _vm._v(_vm._s(p.tip))
-                      ]),
-                      _c("td", { staticClass: "align-right" }, [
-                        _vm._v(_vm._s(p.rate))
+                        ]),
+                        _c("td", { staticClass: "align-right" }, [
+                          _vm._v(_vm._s(_vm.getTip(p)))
+                        ]),
+                        _c("td", { staticClass: "align-right" }, [
+                          _vm._v(_vm._s(p.rate))
+                        ])
                       ])
-                    ])
-                  })
+                    }),
+                    _vm._l(i.waitingTimeList, function(p) {
+                      return _c("tr", [
+                        _c("td", { staticClass: "align-center" }, [
+                          _vm._v("等待时间")
+                        ]),
+                        _c("td", { attrs: { colspan: "4" } }, [
+                          _vm._v(
+                            "$" +
+                              _vm._s(p.waitingPrice) +
+                              "," +
+                              _vm._s(p.waitingTime) +
+                              "分钟，跳过项目:" +
+                              _vm._s(p.orderName) +
+                              "-" +
+                              _vm._s(p.projectName) +
+                              ",等待项目:" +
+                              _vm._s(_vm.getWaitingForProject(p))
+                          )
+                        ])
+                      ])
+                    })
+                  ],
+                  2
                 )
               ]
             )

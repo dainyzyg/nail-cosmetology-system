@@ -10,7 +10,11 @@ window.algorithm = {
   tempTechnicianList: [],
   tempPandAStandardTime: {},
   workingTableList: [],
+  jumpTechMap: new Map(),
   data: {
+    // jumpTechList: [], // 跳过技师的列表，记录本可以做这个项目但是因为要做别的项目而错过的技师，每次往已分配里加项目的时候保存
+    // assignedTechList: [], // 技师被分配的时候添加，有可能技师是本可以做别的项目，要记录，不然没法算等待时间
+    // tempJumpTechList: [], // 每次排队的时候记录技师等待列表，结合assignedTechList可以得知每个项目跳过的技师
     customTimeCountObj: {},
     orderObj: {},
     positionObj: { maxIndex: 0 },
@@ -277,6 +281,8 @@ window.algorithm = {
       this.data.positionObj = r.positionObj
       this.data.orderObj = r.orderObj
       this.data.assignList = r.assignList || []
+      this.data.customTimeCountObj = r.customTimeCountObj || {}
+      this.jumpTechMap = r.jumpTechMap || new Map()
       console.log(this.data, r)
     } else {
       this.data.orderObj = {}
@@ -292,6 +298,8 @@ window.algorithm = {
       orderObj: this.data.orderObj,
       positionObj: this.data.positionObj,
       assignList: this.data.assignList,
+      customTimeCountObj: this.data.customTimeCountObj,
+      jumpTechMap: this.jumpTechMap,
       date: this.getDateStart()
     })
   },
@@ -304,6 +312,7 @@ window.algorithm = {
     this.tempTechnicianList = this.clone(this.data.technicianList)
     console.timeEnd('clone')
     // 初始化数据
+    // this.data.tempJumpTechList = []
     this.data.preAssignList = []
     this.data.advancTechIDList = []
     this.data.advancMultiList = []
@@ -334,7 +343,7 @@ window.algorithm = {
       this.assignOrder(order)
     }
     console.timeEnd('assign')
-    console.log(this.data.preAssignList)
+    // console.log(this.data.preAssignList)
   },
   assignOrder(order) {
     const priorityTime = localStorage.priorityTime
@@ -389,22 +398,125 @@ window.algorithm = {
     })
     // 判断影不影响必做提前计算
     // 定义原始techitem（如果没有提前计算，技师本该排到的项目）
-    let orginTechitem = technicianTimeList[0]
+    // let orginTechitem = technicianTimeList[0]
+
+    // debugger
     for (let techItem of technicianTimeList) {
       let canAssign = this.judgeAssign(techItem)
       if (canAssign) {
-        // this.data.advancMultiList.forEach((x) => (x.technicians = x.technicians.filter((f) => f != techItem.tech.id)))
-        if (orginTechitem != techItem) {
-          console.log('------impack!!!-------')
-        }
         this.assignItem(techItem, order)
         return
+      } else {
+        // else中是跳过的技师
+        // 订单id，项目id，技师id，三个id作为唯一标示
+        let id = `${order.id}-${techItem.projectItem.project.id}-${techItem.tech.id}`
+        // 是覆盖还是只保存第一次的？this.jumpTechMap.has(id)
+        this.jumpTechMap.set(id, {
+          orderID: order.id,
+          orderName: order.name,
+          projectID: techItem.projectItem.project.id,
+          projectName: techItem.projectItem.project.name,
+          techID: techItem.tech.id,
+          techName: techItem.tech.name,
+          timeStart: techItem.timeStart,
+          timeEnd: techItem.timeEnd
+        })
       }
     }
     // 都无法排的时候加入最后排队列表
     this.data.remainOrderList.push(order)
   },
+  computingTechWaitingTime({ assignList, jumpTechMap, date }, waitingConfig) {
+    // 找到最大等待时间
+    let waitPriceMax = 0
+    if (waitingConfig) {
+      let waitMax = waitingConfig.find(x => x.minutes == '最大时间')
+      if (waitMax && waitMax.price) {
+        waitPriceMax = waitMax.price
+      }
+    }
 
+    let getWorkEndTime = date => {
+      const day = date.getDay()
+      let time
+      if (day > 0 && day < 6) {
+        time = parseInt(localStorage.workEndTime)
+      } else {
+        time = parseInt(localStorage.weekendEndTime)
+      }
+      return new Date(new Date(date.toDateString()).getTime() + time * 60 * 60 * 1000)
+    }
+    let workEndTime = getWorkEndTime(date)
+    // 根据 assignList和jumpTechMap计算技师等待时间
+    // const assignList = this.data.assignList
+    // const jumpTechMap = this.jumpTechMap
+    // 跳过技师的项目，只能安排一次
+    const jumpProjectSet = new Set()
+    // 技师等待后做的项目，只能安排一次
+    const waitforAssignSet = new Set()
+    // 技师等待时间信息
+    const techWaitingMap = new Map()
+    jumpTechMap.forEach((value, key, map) => {
+      let id = `${value.orderID}-${value.projectID}`
+      // 安排过了就不安排了，一个项目只能有一个等待技师
+      if (jumpProjectSet.has(id)) return
+      let assignItem = assignList.find(x => {
+        return x.orderID == value.orderID && x.projectID == value.projectID
+      })
+      // 项目没找到，也就不用算等待时间了
+      if (!assignItem) {
+        jumpProjectSet.add(id)
+        return
+      }
+      // 说明技师没有等待还是做了原来的项目
+      if (assignItem.techID == value.techID) {
+        jumpProjectSet.add(id)
+        return
+      }
+      // 技师等待后做的项目
+      let waitforAssianItem = assignList
+        .filter(x => x.techID == value.techID && x.timeEnd > value.timeStart)
+        .sort((a, b) => a.timeStart.getTime() - b.timeStart.getTime())[0]
+      let waitforAssingID = `null-${value.techID}`
+      // 没找到项目，就说明是无限期等待
+      if (waitforAssianItem) {
+        waitforAssingID = waitforAssianItem.id
+        // 说明技师没有等待
+        if (waitforAssianItem.timeStart <= value.timeStart) return
+      }
+      // 说明被安排过了，就不再安排了，直接跳过
+      if (waitforAssignSet.has(waitforAssingID)) return
+      let techWaitItem = {
+        ...value,
+        waitforAssianItem
+      }
+      // 设置等待时间
+      if (waitforAssianItem) {
+        techWaitItem.waitingTime = (waitforAssianItem.timeStart - value.timeStart) / (1000 * 60)
+      } else {
+        techWaitItem.waitingTime = (workEndTime - value.timeStart) / (1000 * 60)
+      }
+      // 计算等待费用
+      techWaitItem.waitingPrice = 0
+      if (waitingConfig) {
+        let waitObj = waitingConfig.find(x => x.minutes >= techWaitItem.waitingTime)
+        if (waitObj) {
+          techWaitItem.waitingPrice = waitObj.price || 0
+        } else {
+          techWaitItem.waitingPrice = waitPriceMax
+        }
+      }
+
+      if (techWaitingMap.has(techWaitItem.techID)) {
+        techWaitingMap.get(techWaitItem.techID).push(techWaitItem)
+      } else {
+        techWaitingMap.set(techWaitItem.techID, [techWaitItem])
+      }
+      jumpProjectSet.add(id)
+      waitforAssignSet.add(waitforAssingID)
+    })
+    return techWaitingMap
+  },
   // 提前计算
   assignAdvanceOrder({ order, projectItem, timeStart }) {
     projectItem.projectPriorityTime = 0
@@ -623,7 +735,7 @@ window.algorithm = {
         name: projectItem.project.name,
         englishName: projectItem.project.englishName,
         price: projectItem.project.price || 0,
-        commissionPercentage: 0, // 提成比例 %
+        commissionPercentage: 0, // 提成比例 % 现在改成金额
         commissionAccount: 0 // 提成金额
       },
       additions: [],
@@ -631,10 +743,10 @@ window.algorithm = {
       accountTotal: projectItem.project.price || 0
     }
     let skillProject = tech.skillInfo[projectItem.project.id]
-    if (skillProject && skillProject.percentage) {
+    if (skillProject && skillProject.percentage && !isNaN(skillProject.percentage)) {
+      // 比例改成金额
       rObj.project.commissionPercentage = skillProject.percentage
-      rObj.commissionAccountTotal = rObj.project.commissionAccount =
-        (skillProject.percentage * projectItem.project.price) / 100
+      rObj.commissionAccountTotal = rObj.project.commissionAccount = skillProject.percentage
     }
 
     projectItem.additions.forEach(a => {
@@ -648,10 +760,10 @@ window.algorithm = {
       }
       rObj.accountTotal += addition.price
       let skillProject = tech.skillInfo[a.id]
-      if (skillProject && skillProject.percentage) {
+      if (skillProject && skillProject.percentage && !isNaN(skillProject.percentage)) {
         addition.commissionPercentage = skillProject.percentage
-        addition.commissionAccount = (skillProject.percentage * a.price) / 100
-        rObj.commissionAccountTotal += addition.commissionAccount
+        addition.commissionAccount = skillProject.percentage
+        rObj.commissionAccountTotal += skillProject.percentage
       }
       rObj.additions.push(addition)
     })

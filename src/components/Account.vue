@@ -49,6 +49,7 @@ export default {
   },
   created() {
     // window.ipcRenderer.on('receive-fee', this.receiveFee)
+    this.getRateConfig()
   },
   beforeDestroy() {
     // clearInterval(this.setIntervalIndex)
@@ -63,10 +64,14 @@ export default {
       cashAmount: 0,
       orderInfo: [],
       dialogVisible: false,
-      tipList: []
+      tipList: [],
+      rateConfig: []
     }
   },
   methods: {
+    async getRateConfig() {
+      this.rateConfig = await this.$IDB.getAll('rateConfig')
+    },
     openScreen() {
       window.ipcRenderer.send('notice-fee-screen', { checkoutProjectList: this.data })
     },
@@ -105,7 +110,44 @@ export default {
           //   return
           // }
         }
-        // 完成校验 保存结账数据
+        // 完成校验
+        // 保存到data.orderObj
+        this.orderInfo.forEach(e => {
+          // tip,checkout
+          const orderInfoItem = this.$algorithm.data.orderObj[e.id].orderInfo.find(x => x.assignItemID == e.assignItemID)
+          // 计算价格
+          // let price = orderInfoItem.project.price || 0
+          // orderInfoItem.additions.forEach((a) => {
+          //   let p = a.price || 0
+          //   price += p
+          // })
+          // price = this.$fixNum(price)
+
+          // 计算保底消费
+          let rateItem = this.rateConfig.find(x => x.rate == e.rate)
+          let bottomTipProportion = 0
+          if (rateItem && rateItem.bottomTipProportion) {
+            bottomTipProportion = rateItem.bottomTipProportion || 0
+          }
+          e.bottomTip = Math.round(e.accountAndCommission.accountTotal * bottomTipProportion / 100)
+          // 计算小费补贴
+          if (e.bottomTip > e.tip) {
+            e.subsidy = e.bottomTip - e.tip
+          } else {
+            e.subsidy = 0
+          }
+
+          let checkoutInfo = {
+            bottomTip: e.bottomTip,
+            subsidy: e.subsidy,
+            tip: e.tip,
+            rate: e.rate,
+            projectAccount: e.accountAndCommission.accountTotal,
+            totalAccount: this.$fixNum(e.accountAndCommission.accountTotal + e.tip)
+          }
+          this.$set(orderInfoItem, 'checkoutInfo', checkoutInfo)
+        })
+        // 保存结账数据
         let checkout = {
           id: this.$getNewID, // key
           orderInfo: this.orderInfo,
@@ -122,26 +164,6 @@ export default {
           projectPrices: this.projectPrices
         }
         await this.$IDB.put('checkoutList', checkout)
-        // 保存到data.orderObj
-        this.orderInfo.forEach(e => {
-          // tip,checkout
-          const orderInfoItem = this.$algorithm.data.orderObj[e.id].orderInfo.find(x => x.assignItemID == e.assignItemID)
-          // 计算价格
-          let price = orderInfoItem.project.price || 0
-          orderInfoItem.additions.forEach((a) => {
-            let p = a.price || 0
-            price += p
-          })
-          price = this.$fixNum(price)
-
-          let checkoutInfo = {
-            tip: e.tip,
-            rate: e.rate,
-            projectAccount: price,
-            totalAccount: this.$fixNum(price + e.tip)
-          }
-          this.$set(orderInfoItem, 'checkoutInfo', checkoutInfo)
-        })
 
         this.$emit('update:visible', false)
         this.$algorithm.saveScheduleData()

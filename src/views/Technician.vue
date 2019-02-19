@@ -15,16 +15,20 @@
             el-button(@click='skillSetting(scope.row)' size='small' type="primary") 技能设置
             el-button(@click='remove(scope.row.id)' size='small' type='danger') 删除
     el-dialog(title='技师信息' :visible.sync='addVisible' style="overflow:hidden;")
-      el-form(:inline="true" label-width="80px")
+      el-form(:inline="true" label-width="100px")
         el-form-item(label='姓名')
-          el-input(auto-complete='off' v-model="formData.name" style="width:200px;")
+          el-input(auto-complete='off' v-model="formData.name" style="width:195px;")
         el-form-item(label='密码')
           el-input(auto-complete='off' v-model="formData.password")
         el-form-item(label='固定台')
           el-select(v-model="formData.fixedTableList" multiple placeholder="请选择")
             el-option(v-for="item in workingTableList" :key="item.id" :label="item.type" :value="item.id")
         el-form-item(label='序号')
-          el-input-number(auto-complete='off' v-model="formData.index")
+          el-input-number(v-model="formData.index")
+        el-form-item(label='目标分数')
+          el-input-number(v-model="formData.targetScore" style="width:195px;")
+        el-form-item(label='目标级别')
+          el-input(auto-complete='off' v-model="formData.targetLevel")
       .dialog-footer(slot='footer')
         el-button(@click="addVisible=false") 取 消
         el-button(type='primary' @click="save") 确 定
@@ -90,7 +94,7 @@ export default {
       })
     },
     async getData() {
-      this.tableData = []
+      let tableData = []
       await this.$IDB.executeTransaction('technician', 'readonly', (t) => {
         const store = t.objectStore('technician')
         const request = store.index('index').openCursor()
@@ -98,11 +102,12 @@ export default {
           const cursor = event.target.result
           if (cursor) {
             cursor.value.fixedTableList = cursor.value.fixedTableList || []
-            this.tableData.push(cursor.value)
+            tableData.push(cursor.value)
             cursor.continue()
           }
         }
       })
+      this.tableData = tableData
     },
     async save() {
       this.formData.index = this.formData.index || 0

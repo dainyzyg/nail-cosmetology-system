@@ -26,12 +26,12 @@
           td.align-right {{fixed2(i.projectPrices-correctNum(i.commissionTotal))}}
       tfoot
         tr
-          th(colspan="6" style="text-align:right") 营业总数:${{aggregatedData.paytotals}} 提成总数:${{commissionAccountTotal}} 利润总数:{{profits}}
+          th(colspan="6" style="text-align:right") 营业总数:${{aggregatedData.projectPrices}} 提成总数:${{commissionAccountTotal}} 小费补贴:${{aggregatedData.subsidyTotal}} 等待费用:${{aggregatedData.waitingPriceTotal}} 利润总数:${{profits}}
     table( v-if="reportType=='techReport'" v-for="i in techList" cellspacing="0" cellpadding="0" style="width:100%;page-break-after: always;")
       caption 技师报单
       tfoot
         tr
-          th(colspan="5" style="text-align:right") 单价总数:${{i.projectPrices}} 提成总数:${{fixed2(i.commissionTotal)}} 小费总数:${{i.tips}} 平均星级:{{(i.rates/i.count).toFixed(2)}} 技师收入:${{fixed2(i.commissionTotal+i.tips)}}
+          th(colspan="5" style="text-align:right") 单价总数:${{i.projectPrices}} 提成总数:${{fixed2(i.commissionTotal)}} 小费总数:${{i.tips+i.subsidys}} 等待费用:${{i.waitingPriceTotal||0}} 平均星级:{{(i.rates/i.count).toFixed(2)}} 技师收入:${{correctNum(i.commissionTotal+i.tips+i.subsidys+(i.waitingPriceTotal||0))}}
       colgroup
         col
         col
@@ -49,8 +49,11 @@
           td.align-center {{p.orderName}}
           td.align-right {{p.projectPrice}}
           td.align-right {{fixed2(p.accountAndCommission.commissionAccountTotal)}}
-          td.align-right {{p.tip}}
+          td.align-right {{getTip(p)}}
           td.align-right {{p.rate}}
+        tr(v-for="p in i.waitingTimeList")
+          td.align-center 等待时间
+          td(colspan="4") ${{p.waitingPrice}},{{p.waitingTime}}分钟，跳过项目:{{p.orderName}}-{{p.projectName}},等待项目:{{getWaitingForProject(p)}}
     table(v-if="false" cellspacing="0" cellpadding="0" style="width:100%;page-break-after: always;")
       colgroup
         col
@@ -113,6 +116,17 @@ export default {
     // window.ipcRenderer.removeListener('asynchronous-reply', this.getData)
   },
   methods: {
+    getTip(p) {
+      console.log(p.subsidy, p)
+      if (p.subsidy > 0) {
+        return `${p.tip}+${p.subsidy}`
+      }
+      return p.tip
+    },
+    getWaitingForProject({ waitforAssianItem }) {
+      if (!waitforAssianItem) return '无'
+      return `${waitforAssianItem.orderName}-${waitforAssianItem.projectName}`
+    },
     correctNum(val) {
       if (isNaN(val)) {
         return NaN
@@ -155,10 +169,10 @@ export default {
   },
   computed: {
     commissionAccountTotal() {
-      return this.fixed2(this.aggregatedData.commissionAccountTotal)
+      return this.correctNum(this.aggregatedData.commissionAccountTotal)
     },
     profits() {
-      return this.fixed2(this.aggregatedData.paytotals - this.aggregatedData.tips - this.correctNum(this.aggregatedData.commissionAccountTotal))
+      return this.correctNum(this.aggregatedData.projectPrices - this.aggregatedData.subsidyTotal - this.aggregatedData.waitingPriceTotal - this.aggregatedData.commissionAccountTotal)
     }
   },
   watch: {}

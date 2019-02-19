@@ -11,7 +11,7 @@
           template(slot-scope='scope')
             el-button(@click='edit(scope.row)' size='small' type="primary") 编辑
             el-button(@click='remove(scope.row.id)' size='small' type='danger') 删除
-    el-dialog(title='新增' :visible.sync='addVisible' style="overflow:hidden;")
+    el-dialog(:visible.sync='addVisible' style="overflow:hidden;")
       el-form(:model="formData" ref="formData" label-width="80px" style="width:260px" :rules="rules")
         el-form-item(label='台种类' prop="type")
           el-input(auto-complete='off' v-model="formData.type")

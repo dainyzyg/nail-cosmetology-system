@@ -71,6 +71,8 @@ export default {
       giftCardAmount: 0,
       commissionAccountTotal: 0,
       projectPrices: 0,
+      waitingPriceTotal: 0,
+      subsidyTotal: 0,
       tips: 0,
       firstSendObj: {
         domReady: false,
@@ -108,9 +110,33 @@ export default {
       })
       return this.$fixNum(price)
     },
+    async computingTechWaitingTime(techMap) {
+      let query = IDBKeyRange.bound(this.dateBegin, this.dataEnd)
+      let scheduleData = await this.$IDB.getAll('schedule', query)
+      let waitingConfig = await this.$IDB.getAll('waitingConfig')
+      if (scheduleData) {
+        scheduleData.forEach(s => {
+          let techWaitingMap = this.$algorithm.computingTechWaitingTime(s, waitingConfig)
+          techWaitingMap.forEach((value, key, map) => {
+            if (techMap.has(key)) {
+              let techItem = techMap.get(key)
+              techItem.waitingTimeList = techItem.waitingTimeList || []
+              techItem.waitingTimeList.push(...value)
+              // 计算等待费用,更新等待费用合计 waitingPriceTotal
+              let waitingPrice = value.reduce((a, v) => a + v.waitingPrice, 0)
+              techItem.waitingPriceTotal = techItem.waitingPriceTotal || 0
+              techItem.waitingPriceTotal += waitingPrice
+              this.waitingPriceTotal += waitingPrice
+            }
+          })
+        })
+      }
+      return new Map()
+    },
     async getData() {
       let query = IDBKeyRange.bound(this.dateBegin, this.dataEnd)
       let data = await this.$IDB.getAllByIndex('checkoutList', 'date', query)
+      // let scheduleData = await this.$IDB.getAll('schedule', query)
       let orderMap = new Map()
       let techMap = new Map()
       console.time('a')
@@ -123,10 +149,13 @@ export default {
         this.commissionAccountTotal += item.commissionAccountTotal
         this.tips += item.tips
         this.projectPrices += item.projectPrices
+
         // console.log(item.payTotal)
         // this.tips +=item.tips
         // this.projectPrices +=item.projectPrices
         item.orderInfo.forEach(projectInfo => {
+          // 合计小费补贴
+          this.subsidyTotal += projectInfo.subsidy || 0
           // 生成顾客信息
           if (orderMap.has(projectInfo.id)) {
             let orderItem = orderMap.get(projectInfo.id)
@@ -180,6 +209,8 @@ export default {
             assignItemID: projectInfo.assignItemID,
             rate: projectInfo.rate,
             tip: projectInfo.tip,
+            bottomTip: projectInfo.bottomTip || 0,
+            subsidy: projectInfo.subsidy || 0,
             orderId: projectInfo.id,
             orderName: projectInfo.name,
             orderPhone: projectInfo.phone,
@@ -193,6 +224,7 @@ export default {
             let techItem = techMap.get(projectInfo.technicianID)
             techItem.projectList.push(projectObj)
             techItem.tips = techItem.tips + projectObj.tip
+            techItem.subsidys += projectObj.subsidy
             techItem.projectPrices = techItem.projectPrices + projectObj.projectPrice
             techItem.payTotals = techItem.payTotals + projectObj.payTotal
             techItem.rates += projectObj.rate
@@ -203,6 +235,7 @@ export default {
               id: projectInfo.technicianID,
               name: projectInfo.technicianName,
               tips: projectObj.tip,
+              subsidys: projectObj.subsidy,
               rates: projectObj.rate,
               projectPrices: projectObj.projectPrice,
               payTotals: projectObj.payTotal,
@@ -213,9 +246,11 @@ export default {
           }
         })
       })
+      await this.computingTechWaitingTime(techMap)
       console.timeEnd('a')
       this.orderList = [...orderMap.values()]
       this.techList = [...techMap.values()]
+      // debugger
       console.log(this.techList)
     },
     setFirstSendObj(attr) {
@@ -228,7 +263,9 @@ export default {
           paytotals: this.paytotals,
           commissionAccountTotal: this.commissionAccountTotal,
           tips: this.tips,
-          projectPrices: this.projectPrices
+          projectPrices: this.projectPrices,
+          waitingPriceTotal: this.waitingPriceTotal,
+          subsidyTotal: this.subsidyTotal
         })
       }
     }
