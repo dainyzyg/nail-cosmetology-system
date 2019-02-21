@@ -111,6 +111,9 @@ export default {
           // }
         }
         // 完成校验
+        // 记录技师分数
+        let techScoreMap = new Map()
+
         // 保存到data.orderObj
         this.orderInfo.forEach(e => {
           // tip,checkout
@@ -126,9 +129,23 @@ export default {
           // 计算保底消费
           let rateItem = this.rateConfig.find(x => x.rate == e.rate)
           let bottomTipProportion = 0
+          let scoreCoefficient = 0 // 得分倍数
           if (rateItem && rateItem.bottomTipProportion) {
             bottomTipProportion = rateItem.bottomTipProportion || 0
           }
+          // 计算得分
+          if (rateItem && rateItem.scoreCoefficient) {
+            scoreCoefficient = rateItem.scoreCoefficient || 0
+          }
+          // 计算技师得分
+          let score = Math.round(e.accountAndCommission.accountTotal * scoreCoefficient)
+          // 保存技师得分，方便之后存入数据库
+          if (score > 0) {
+            let techScore = techScoreMap.get(e.technicianID) || 0
+            techScore += score
+            techScoreMap.set(e.technicianID, techScore)
+          }
+          e.score = score
           e.bottomTip = Math.round(e.accountAndCommission.accountTotal * bottomTipProportion / 100)
           // 计算小费补贴
           if (e.bottomTip > e.tip) {
@@ -138,6 +155,7 @@ export default {
           }
 
           let checkoutInfo = {
+            score,
             bottomTip: e.bottomTip,
             subsidy: e.subsidy,
             tip: e.tip,
@@ -164,7 +182,7 @@ export default {
           projectPrices: this.projectPrices
         }
         await this.$IDB.put('checkoutList', checkout)
-
+        this.updateTechRate(techScoreMap)
         this.$emit('update:visible', false)
         this.$algorithm.saveScheduleData()
       } catch (e) {
@@ -173,6 +191,18 @@ export default {
           type: 'error'
         })
       }
+    },
+    setTechRate(score, technicianID) {
+
+    },
+    async updateTechRate(techScoreMap) {
+      techScoreMap.forEach(async (value, key) => {
+        let tech = await this.$IDB.get('technician', key)
+        if (tech) {
+          tech.score = (tech.score || 0) + value
+          this.$IDB.put('technician', tech)
+        }
+      })
     },
     async setorderTip(orderID, tipObj) {
       await this.$IDB.executeTransaction(['order'], 'readwrite', (t) => {

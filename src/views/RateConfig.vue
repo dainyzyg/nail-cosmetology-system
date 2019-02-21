@@ -1,8 +1,8 @@
 <template lang="pug">
   .page.col
-    .breadcrumb-wraper
-      .title 得分基数:
-      el-input-number(style="width:150px;" size="medium" :min="1" v-model="rateBaseScore" @change="changeRateBaseScore")
+    //- .breadcrumb-wraper
+    //-   .title 得分基数:
+    //-   el-input-number(style="width:150px;" size="medium" :min="1" v-model="rateBaseScore" @change="changeRateBaseScore")
     .table-wraper
       el-table.table(:data="tableData" border height="100%")
         el-table-column(prop="rate" label="星级" align="center" header-align="center")
@@ -11,7 +11,7 @@
         el-table-column(label="得分系数" prop="scoreCoefficient" align="center" header-align="center")
           template(slot-scope='scope')
             el-input-number(:max="100" v-model="scope.row.scoreCoefficient" @change="change(scope.row)")
-        el-table-column(label="保底小费比例" prop="bottomTipProportion" align="center" header-align="center")
+        el-table-column(label="保底小费比例%" prop="bottomTipProportion" align="center" header-align="center")
           template(slot-scope='scope')
             el-input-number(:min="0" :max="100" v-model="scope.row.bottomTipProportion" @change="change(scope.row)")
 </template>
