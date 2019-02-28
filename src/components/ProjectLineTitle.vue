@@ -8,6 +8,8 @@
     .project-line-cell.t 必问
     .project-line-cell.t 必做
     .project-line-cell.time.t 标准时
+    .project-line-cell.time.t 提成
+    .project-line-cell.index.t 序号
 </template>
 
 <script>
@@ -60,6 +62,9 @@ export default {
 }
 .project-line-cell.time {
   flex: 0 0 20px;
+}
+.project-line-cell.index {
+  flex: 0 0 30px;
 }
 .icon {
   color: #606266;

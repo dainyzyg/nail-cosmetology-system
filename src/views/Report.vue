@@ -136,6 +136,7 @@ export default {
     async getData() {
       let query = IDBKeyRange.bound(this.dateBegin, this.dataEnd)
       let data = await this.$IDB.getAllByIndex('checkoutList', 'date', query)
+      let techData = await this.$IDB.getAll('technician')
       // let scheduleData = await this.$IDB.getAll('schedule', query)
       let orderMap = new Map()
       let techMap = new Map()
@@ -231,7 +232,17 @@ export default {
             techItem.count += 1
             techItem.commissionTotal += projectObj.accountAndCommission.commissionAccountTotal
           } else {
+            let tech = techData.find(x => x.id == projectInfo.technicianID)
+            let scoreObj = null
+            if (tech && tech.targetScore && tech.targetLevel) {
+              scoreObj = {
+                targetScore: tech.targetScore,
+                targetLevel: tech.targetLevel,
+                score: tech.score || 0
+              }
+            }
             techMap.set(projectInfo.technicianID, {
+              scoreObj,
               id: projectInfo.technicianID,
               name: projectInfo.technicianName,
               tips: projectObj.tip,

@@ -6,6 +6,8 @@
     CheckCell.project-line-cell(v-model="data.ask" @change="save")
     CheckCell.project-line-cell(v-model="data.do" @change="save")
     EditCell.project-line-cell.time(number v-model="data.standardTime" @change="save" @focus="$emit('focus')" @blur="$emit('blur')")
+    EditCell.project-line-cell.time(number v-model="data.commision" @change="save" @focus="$emit('focus')" @blur="$emit('blur')")
+    EditCell.project-line-cell.index(number v-model="data.index" @change="save" @focus="$emit('focus')" @blur="$emit('blur')")
 </template>
 
 <script>
@@ -18,7 +20,7 @@ export default {
     CheckCell
   },
   props: ['project', 'addition'],
-  created() {},
+  created() { },
   data() {
     return {}
   },
@@ -83,6 +85,9 @@ export default {
 }
 .project-line-cell.time {
   flex: 0 0 20px;
+}
+.project-line-cell.index {
+  flex: 0 0 30px;
 }
 .isProject {
   font-weight: bolder;

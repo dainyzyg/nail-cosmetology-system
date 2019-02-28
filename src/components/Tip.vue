@@ -117,8 +117,8 @@ export default {
   display: flex;
   justify-content: space-between;
 }
-.tip-title {
-}
+/* .tip-title {
+} */
 .tip-value {
   font-size: 24px;
 }
@@ -129,10 +129,10 @@ export default {
   display: flex;
   justify-content: space-between;
 }
-.info-title {
+/* .info-title {
 }
 .info-value {
-}
+} */
 .technician {
   border-top: 1px dashed slategray;
 }

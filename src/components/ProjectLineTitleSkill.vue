@@ -6,7 +6,8 @@
     .project-line-cell.t 最后备
     .project-line-cell.time.t 标准时
     .project-line-cell.time.t 时调
-    .project-line-cell.time.t 提成
+    .project-line-cell.time.t 标准提成
+    .project-line-cell.time.t 提成调整
 </template>
 
 <script>

@@ -149,18 +149,35 @@ export default {
       })
     },
     async getList(storeName, dataName, parentID) {
-      this[dataName] = []
-      this.$IDB.executeTransaction([storeName], 'readonly', (t) => {
+      // this[dataName] = []
+      const list = []
+      await this.$IDB.executeTransaction([storeName], 'readonly', (t) => {
         const store = t.objectStore(storeName)
         const request = store.index('parentID').openCursor(IDBKeyRange.only(parentID))
         request.onsuccess = (event) => {
           const cursor = event.target.result
           if (cursor) {
-            this[dataName].push(cursor.value)
+            list.push(cursor.value)
             cursor.continue()
           }
         }
       })
+
+      if (storeName == 'addition') {
+        list.sort((a, b) => {
+          let indexA = a.index
+          let indexB = b.index
+
+          if (a.index == null) {
+            indexA = a.id
+          }
+          if (b.index == null) {
+            indexB = b.id
+          }
+          return indexA - indexB
+        })
+      }
+      this[dataName] = list
     },
     save() {
       try {

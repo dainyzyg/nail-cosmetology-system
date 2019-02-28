@@ -6,7 +6,8 @@
     CheckCell.project-line-cell(v-model="skillItem.type" label="sub" @change="save")
     .project-line-cell.time {{data.standardTime}}
     EditCell.project-line-cell.time(number v-model="skillItem.timeDiff" @change="save")
-    EditCell.project-line-cell.time(number v-model="skillItem.percentage" @change="save")
+    .project-line-cell.time {{data.commision}}
+    EditCell.project-line-cell.time(number v-model="skillItem.commisionDiff" @change="save")
 </template>
 
 <script>
@@ -19,7 +20,7 @@ export default {
     CheckCell
   },
   props: ['project', 'addition', 'technician'],
-  created() {},
+  created() { },
   data() {
     console.log('skill', this.skillInfo)
     return {

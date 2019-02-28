@@ -41,6 +41,18 @@ export default {
           }
         }
       })
+      additionList.sort((a, b) => {
+        let indexA = a.index
+        let indexB = b.index
+
+        if (a.index == null) {
+          indexA = a.id
+        }
+        if (b.index == null) {
+          indexB = b.id
+        }
+        return indexA - indexB
+      })
       this.additionList = additionList
     }
   },
@@ -51,7 +63,7 @@ export default {
 
 <style scoped>
 .project {
-  width: 189px;
+  width: 215px;
   border: 1px solid #aaa;
   margin-bottom: 4px;
 }

@@ -735,19 +735,19 @@ window.algorithm = {
         name: projectItem.project.name,
         englishName: projectItem.project.englishName,
         price: projectItem.project.price || 0,
-        commissionPercentage: 0, // 提成比例 % 现在改成金额
-        commissionAccount: 0 // 提成金额
+        // commissionPercentage: 0, // 提成比例 % 现在改成金额
+        commissionAccount: projectItem.project.commision || 0 // 提成金额
       },
       additions: [],
       commissionAccountTotal: 0,
       accountTotal: projectItem.project.price || 0
     }
     let skillProject = tech.skillInfo[projectItem.project.id]
-    if (skillProject && skillProject.percentage && !isNaN(skillProject.percentage)) {
+    if (skillProject && skillProject.commisionDiff && !isNaN(skillProject.commisionDiff)) {
       // 比例改成金额
-      rObj.project.commissionPercentage = skillProject.percentage
-      rObj.commissionAccountTotal = rObj.project.commissionAccount = skillProject.percentage
+      rObj.project.commissionAccount += skillProject.commisionDiff || 0
     }
+    rObj.commissionAccountTotal = rObj.project.commissionAccount
 
     projectItem.additions.forEach(a => {
       let addition = {
@@ -755,16 +755,15 @@ window.algorithm = {
         name: a.name,
         englishName: a.englishName,
         price: a.price || 0,
-        commissionPercentage: 0,
-        commissionAccount: 0
+        // commissionPercentage: 0,
+        commissionAccount: a.commision || 0
       }
       rObj.accountTotal += addition.price
       let skillProject = tech.skillInfo[a.id]
-      if (skillProject && skillProject.percentage && !isNaN(skillProject.percentage)) {
-        addition.commissionPercentage = skillProject.percentage
-        addition.commissionAccount = skillProject.percentage
-        rObj.commissionAccountTotal += skillProject.percentage
+      if (skillProject && skillProject.commisionDiff && !isNaN(skillProject.commisionDiff)) {
+        addition.commissionAccount += skillProject.commisionDiff || 0
       }
+      rObj.commissionAccountTotal += addition.commissionAccount
       rObj.additions.push(addition)
     })
     return rObj

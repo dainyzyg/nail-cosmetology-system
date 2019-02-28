@@ -54,6 +54,12 @@
         tr(v-for="p in i.waitingTimeList")
           td.align-center 等待时间
           td(colspan="4") ${{p.waitingPrice}},{{p.waitingTime}}分钟，跳过项目:{{p.orderName}}-{{p.projectName}},等待项目:{{getWaitingForProject(p)}}
+        ScoreProgress(:scoreObj="i.scoreObj")
+            //- .score-progress
+            //-   span 技师得分：
+            //-   .score-progress-bar
+            //-     .score-progress-bar-filling
+            //-   span 500/1000 (升级中工)
     table(v-if="false" cellspacing="0" cellpadding="0" style="width:100%;page-break-after: always;")
       colgroup
         col
@@ -90,9 +96,12 @@
           td.align-right {{i.payTotal}}
 </template>
 <script>
+import ScoreProgress from './ScoreProgress.vue'
 
 export default {
-  components: {},
+  components: {
+    ScoreProgress
+  },
   data() {
     return {
       aggregatedData: {},
