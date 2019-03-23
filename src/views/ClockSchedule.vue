@@ -25,7 +25,8 @@
     .panel.clock-schedule
       .panel-title
         | 排钟表
-        el-time-picker.time-now(format="hh:mm:ss A" @change="dateTimeNowChange" v-model="dateTimeNow" size="medium")
+        .time-now(v-if="isRealtime") {{realtime}}
+        el-time-picker.time-now(v-if="!isRealtime" format="hh:mm:ss A" @change="dateTimeNowChange" v-model="dateTimeNow" size="medium")
         el-dropdown.manage-btn(trigger="click" v-if="!showChange")
           i.el-icon-setting.setting-btn
           el-dropdown-menu(slot="dropdown")
@@ -107,6 +108,9 @@ export default {
   },
   data() {
     return {
+      isRealtime: localStorage.realtime == 'true',
+      realtime: new Date().toLocaleTimeString('en'),
+      interval: null,
       changeList: [],
       showChange: false,
       timeCountVisible: false,
@@ -125,10 +129,22 @@ export default {
     }
   },
   async created() {
+    this.showRealtime()
     this.getTechCount()
     this.$algorithm.initData()
   },
+  beforeDestroy() {
+    clearInterval(this.interval)
+  },
   methods: {
+    showRealtime() {
+      if (this.isRealtime) {
+        this.interval = setInterval(() => {
+          this.realtime = new Date().toLocaleTimeString('en')
+          console.log('realtime')
+        }, 1000)
+      }
+    },
     comfirmChange() {
       // orderObj -- timePositions
       // positionObj
@@ -140,7 +156,10 @@ export default {
         })
         return
       }
-      if (!this.positionObj[this.changeList[0]] && !this.positionObj[this.changeList[1]]) {
+      if (
+        !this.positionObj[this.changeList[0]] &&
+        !this.positionObj[this.changeList[1]]
+      ) {
         this.$message({
           showClose: true,
           message: '不能交换两个空位！',
@@ -166,20 +185,23 @@ export default {
       let orderIDA, orderIDB
       if (this.positionObj[this.changeList[0]]) {
         orderIDB = this.positionObj[this.changeList[0]].orderID
-        this.orderObj[orderIDB].timePositions.forEach((x) => {
+        this.orderObj[orderIDB].timePositions.forEach(x => {
           delete this.positionObj[x.position]
         })
       }
       if (this.positionObj[this.changeList[1]]) {
         orderIDA = this.positionObj[this.changeList[1]].orderID
-        this.orderObj[orderIDA].timePositions.forEach((x) => {
+        this.orderObj[orderIDA].timePositions.forEach(x => {
           delete this.positionObj[x.position]
         })
       }
 
       console.log(this.changeList)
       let oldPositions = this.placingOrder(orderIDA, this.changeList[0])
-      oldPositions = [...oldPositions, ...this.placingOrder(orderIDB, this.changeList[1])]
+      oldPositions = [
+        ...oldPositions,
+        ...this.placingOrder(orderIDB, this.changeList[1])
+      ]
       oldPositions.sort((x, y) => {
         if (x.time.getTime() == y.time.getTime()) {
           return x.index - y.index
@@ -200,7 +222,9 @@ export default {
       const count = order.orderInfo.length
       const hour = parseInt(position.split('-')[0].split(':')[0])
       const minute = parseInt(position.split('-')[0].split(':')[1])
-      const timeFirst = new Date(this.dateStart.getTime() + (hour * 60 + minute) * 60 * 1000)
+      const timeFirst = new Date(
+        this.dateStart.getTime() + (hour * 60 + minute) * 60 * 1000
+      )
       const timePositions = [
         {
           time: timeFirst,
@@ -214,11 +238,15 @@ export default {
 
       for (let i = 1; i < count; i++) {
         const prevTimePosition = timePositions[timePositions.length - 1]
-        let time = new Date(prevTimePosition.time.getTime() + this.projectDuration * 60 * 1000)
+        let time = new Date(
+          prevTimePosition.time.getTime() + this.projectDuration * 60 * 1000
+        )
         let findPosition = false
         let index = 1
         while (!findPosition) {
-          let timeItem = this.timeList.find((x) => x.time == time.toLocaleTimeString('en-GB').replace(/:00$/, ''))
+          let timeItem = this.timeList.find(
+            x => x.time == time.toLocaleTimeString('en-GB').replace(/:00$/, '')
+          )
           if (!timeItem) {
             throw new Error('可用空间不足，无法分配项目！')
           }
@@ -229,7 +257,8 @@ export default {
           if (time >= this.workEndTime) {
             throw new Error('可用空间不足，无法分配项目！')
           }
-          const position = time.toLocaleTimeString('en-GB').replace(/:00$/, '') + '-' + index
+          const position =
+            time.toLocaleTimeString('en-GB').replace(/:00$/, '') + '-' + index
           if (this.positionObj[position]) {
             index += 1
           } else {
@@ -247,7 +276,7 @@ export default {
       }
 
       const projects = this.getProjects(order)
-      timePositions.forEach((i) => {
+      timePositions.forEach(i => {
         this.positionObj[i.position] = {
           name: order.name,
           orderID: order.id,
@@ -290,20 +319,22 @@ export default {
       this.timeCountVisible = true
     },
     async getTechCount() {
-      await window.IDB.executeTransaction(['technician'], 'readonly', (t) => {
+      await window.IDB.executeTransaction(['technician'], 'readonly', t => {
         const store = t.objectStore('technician')
         const request = store.count()
-        request.onsuccess = (event) => {
+        request.onsuccess = event => {
           const cursor = event.target.result
           this.techCount = cursor
         }
       })
     },
     getDesignatedTech(techs) {
-      return techs.map((x) => x.name.substr(0, 2)).join(' ')
+      return techs.map(x => x.name.substr(0, 2)).join(' ')
     },
     isTechFree(tech) {
-      return !this.data.assignList.find((x) => x.techID == tech.id && x.status == 'start')
+      return !this.data.assignList.find(
+        x => x.techID == tech.id && x.status == 'start'
+      )
       // let isFree = !this.data.assignList.find((x) => x.techID == tech.id && x.status == 'start')
       // if (isFree && tech.lastClock.time > this.$algorithm.getDateNow()) {
       //   isFree = false
@@ -311,7 +342,14 @@ export default {
       // return isFree
     },
     dateTimeNowChange(val) {
-      localStorage.dateTimeNow = new Date(2018, 1, 26, val.getHours(), val.getMinutes(), val.getSeconds()).toISOString()
+      localStorage.dateTimeNow = new Date(
+        2018,
+        1,
+        26,
+        val.getHours(),
+        val.getMinutes(),
+        val.getSeconds()
+      ).toISOString()
       this.assign()
     },
     async getSchedule() {
@@ -334,7 +372,7 @@ export default {
       }
     },
     getProjects(order) {
-      return order.orderInfo.map((x) => x.project.name).join('|')
+      return order.orderInfo.map(x => x.project.name).join('|')
     },
     orderSave(temp) {
       let oldPositions = []
@@ -347,7 +385,9 @@ export default {
       const count = this.selectedOrder.orderInfo.length
       const hour = parseInt(this.title.split('-')[0].split(':')[0])
       const minute = parseInt(this.title.split('-')[0].split(':')[1])
-      const timeFirst = new Date(this.dateStart.getTime() + (hour * 60 + minute) * 60 * 1000)
+      const timeFirst = new Date(
+        this.dateStart.getTime() + (hour * 60 + minute) * 60 * 1000
+      )
       const timePositions = [
         {
           time: timeFirst,
@@ -361,11 +401,15 @@ export default {
 
       for (let i = 1; i < count; i++) {
         const prevTimePosition = timePositions[timePositions.length - 1]
-        let time = new Date(prevTimePosition.time.getTime() + this.projectDuration * 60 * 1000)
+        let time = new Date(
+          prevTimePosition.time.getTime() + this.projectDuration * 60 * 1000
+        )
         let findPosition = false
         let index = 1
         while (!findPosition) {
-          let timeItem = this.timeList.find((x) => x.time == time.toLocaleTimeString('en-GB').replace(/:00$/, ''))
+          let timeItem = this.timeList.find(
+            x => x.time == time.toLocaleTimeString('en-GB').replace(/:00$/, '')
+          )
           if (!timeItem) {
             throw new Error('可用空间不足，无法分配项目！')
           }
@@ -376,7 +420,8 @@ export default {
           if (time >= this.workEndTime) {
             throw new Error('可用空间不足，无法分配项目！')
           }
-          const position = time.toLocaleTimeString('en-GB').replace(/:00$/, '') + '-' + index
+          const position =
+            time.toLocaleTimeString('en-GB').replace(/:00$/, '') + '-' + index
           if (this.positionObj[position]) {
             index += 1
           } else {
@@ -397,7 +442,7 @@ export default {
         this.selectedOrder.id = this.$getNewID
       }
       const projects = this.getProjects(this.selectedOrder)
-      timePositions.forEach((i) => {
+      timePositions.forEach(i => {
         this.positionObj[i.position] = {
           name: this.selectedOrder.name,
           orderID: this.selectedOrder.id,
@@ -422,14 +467,14 @@ export default {
     },
     clearOrder() {
       this.title = this.selectedOrder.timePositions[0].position
-      this.selectedOrder.timePositions.forEach((x) => {
+      this.selectedOrder.timePositions.forEach(x => {
         delete this.positionObj[x.position]
       })
       // this.assign()
     },
     deleteOrder() {
       const oldPositions = [...this.selectedOrder.timePositions]
-      this.selectedOrder.timePositions.forEach((x) => {
+      this.selectedOrder.timePositions.forEach(x => {
         delete this.positionObj[x.position]
       })
       this.$delete(this.orderObj, this.selectedOrder.id)
@@ -445,18 +490,22 @@ export default {
       this.$algorithm.saveScheduleData()
     },
     async clearScheduleData() {
-      const r = await this.$confirm('此操作将清空所有订单数据, 是否继续?', '提示', {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'warning'
-      })
+      const r = await this.$confirm(
+        '此操作将清空所有订单数据, 是否继续?',
+        '提示',
+        {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning'
+        }
+      )
       if (r != 'confirm') return
       await window.IDB.delete('schedule', this.dateStart)
       // 删除 结账表checkoutList
-      await this.$IDB.executeTransaction(['checkoutList'], 'readwrite', (t) => {
+      await this.$IDB.executeTransaction(['checkoutList'], 'readwrite', t => {
         const store = t.objectStore('checkoutList')
         const request = store.index('date').getAllKeys(this.dateStart)
-        request.onsuccess = (event) => {
+        request.onsuccess = event => {
           const result = event.target.result
           if (result) {
             result.forEach(key => store.delete(key))
@@ -467,7 +516,7 @@ export default {
       this.$algorithm.initData()
     },
     judgeMove(oldPositions) {
-      oldPositions.forEach((x) => {
+      oldPositions.forEach(x => {
         if (!this.positionObj[x.position]) {
           this.MoveLeft(x)
         }
@@ -477,7 +526,7 @@ export default {
       // 取当前行该位置后的所有项目Object.keys().filter.sort，按顺序重新设置序号，再判断最后一个空位是否由满变空
       // 如果由满变空 取后面的项目依次判断能否上移，Object.keys().filter.sort
       // 然后再嵌套执行this.MoveLeft(x)
-      const timeItem = this.timeList.find((x) => x.time == position.timeStr)
+      const timeItem = this.timeList.find(x => x.time == position.timeStr)
       if (!timeItem) return
       const lastPosition = `${position.timeStr}-${timeItem.orderCount}`
       let lastPositionItem = null
@@ -486,9 +535,13 @@ export default {
       }
       lastPositionItem = lastPositionItem || this.positionObj[lastPosition]
       const moveList = Object.keys(this.positionObj)
-        .filter((x) => this.positionObj[x].timeStr == position.timeStr && this.positionObj[x].index > position.index)
+        .filter(
+          x =>
+            this.positionObj[x].timeStr == position.timeStr &&
+            this.positionObj[x].index > position.index
+        )
         .sort((a, b) => this.positionObj[a].index - this.positionObj[b].index)
-        .map((x) => this.positionObj[x])
+        .map(x => this.positionObj[x])
       for (let i = position.index; i <= timeItem.orderCount; i++) {
         let positionItem = moveList.shift()
         if (!positionItem) break
@@ -498,7 +551,9 @@ export default {
         this.positionObj[positionItem.position] = positionItem
         delete this.positionObj[oldPosition]
         // set timePositions
-        let timePositionItem = this.orderObj[positionItem.orderID].timePositions.find((x) => x.position == oldPosition)
+        let timePositionItem = this.orderObj[
+          positionItem.orderID
+        ].timePositions.find(x => x.position == oldPosition)
         if (timePositionItem) {
           timePositionItem.position = positionItem.position
           timePositionItem.index = positionItem.index
@@ -512,12 +567,19 @@ export default {
       console.log('moveUp')
       console.log(position)
       const moveList = Object.keys(this.positionObj)
-        .filter((x) => {
+        .filter(x => {
           let result = false
           const positionItem = this.positionObj[x]
-          if (positionItem.timeStr > position.timeStr && positionItem.number > 1) {
-            let prevPositionItem = this.orderObj[positionItem.orderID].timePositions[positionItem.number - 2]
-            if (position.time - prevPositionItem.time >= this.projectDuration * 60 * 1000) {
+          if (
+            positionItem.timeStr > position.timeStr &&
+            positionItem.number > 1
+          ) {
+            let prevPositionItem = this.orderObj[positionItem.orderID]
+              .timePositions[positionItem.number - 2]
+            if (
+              position.time - prevPositionItem.time >=
+              this.projectDuration * 60 * 1000
+            ) {
               result = true
             }
           }
@@ -531,11 +593,13 @@ export default {
           }
           return pa.time - pb.time
         })
-        .map((x) => this.positionObj[x])
+        .map(x => this.positionObj[x])
       if (moveList.length > 0) {
         let positionItem = moveList[0]
         this.selectedOrder = this.orderObj[positionItem.orderID]
-        this.title = this.orderObj[positionItem.orderID].timePositions[0].position
+        this.title = this.orderObj[
+          positionItem.orderID
+        ].timePositions[0].position
         this.orderSave('temp')
       }
     },
@@ -543,20 +607,22 @@ export default {
       // if (timeItem.time == '20:45') debugger
       // console.log({ timeItem }, timeItem.orderCount)
       let orderCount = timeItem.orderCount
-      let smallCount = Object.keys(this.positionObj)
-        .filter(x => {
-          try {
-            if (this.positionObj[x].timeStr == timeItem.time && this.positionObj[x].index <= orderCount) {
-              let positionItem = this.positionObj[x]
-              let order = this.orderObj[positionItem.orderID]
-              let kind = order.orderInfo[positionItem.number - 1].kind
-              if (kind.orderRule == '由后到前') {
-                return true
-              }
+      let smallCount = Object.keys(this.positionObj).filter(x => {
+        try {
+          if (
+            this.positionObj[x].timeStr == timeItem.time &&
+            this.positionObj[x].index <= orderCount
+          ) {
+            let positionItem = this.positionObj[x]
+            let order = this.orderObj[positionItem.orderID]
+            let kind = order.orderInfo[positionItem.number - 1].kind
+            if (kind.orderRule == '由后到前') {
+              return true
             }
-          } catch (e) { }
-          return false
-        }).length
+          }
+        } catch (e) {}
+        return false
+      }).length
 
       while (smallCount > 0) {
         let count = 0
@@ -569,7 +635,7 @@ export default {
               if (kind.orderRule == '由后到前') {
                 count += 1
               }
-            } catch (e) { }
+            } catch (e) {}
           }
         }
         orderCount += smallCount
@@ -581,9 +647,13 @@ export default {
       // 根据maxIndex 依次寻找溢出的项目
       // 或者用Object.keys()也可以一试
       return Object.keys(this.positionObj)
-        .filter((x) => this.positionObj[x].timeStr == timeItem.time && this.positionObj[x].index > this.getOrderCount(timeItem))
+        .filter(
+          x =>
+            this.positionObj[x].timeStr == timeItem.time &&
+            this.positionObj[x].index > this.getOrderCount(timeItem)
+        )
         .sort((a, b) => this.positionObj[a].index - this.positionObj[b].index)
-        .map((x) => this.positionObj[x])
+        .map(x => this.positionObj[x])
     },
     assign() {
       this.$algorithm.assign()
@@ -593,7 +663,7 @@ export default {
         return
       }
       if (this.changeList.includes(id)) {
-        this.changeList = this.changeList.filter((x) => x != id)
+        this.changeList = this.changeList.filter(x => x != id)
       } else if (this.changeList.length < 2) {
         this.changeList.push(id)
       }
@@ -622,7 +692,9 @@ export default {
         r.number = x.order.orderInfo.filter(f => f.assignItemID).length + 1
         r.orderName = x.order.name
         let index = x.order.timePositions[r.number - 1].index
-        let position = x.order.timePositions[r.number - 1].time.toLocaleTimeString('en').replace(/:00 [AP]M$/, '')
+        let position = x.order.timePositions[r.number - 1].time
+          .toLocaleTimeString('en')
+          .replace(/:00 [AP]M$/, '')
         r.position = `${position}-${index}`
         return r
       })

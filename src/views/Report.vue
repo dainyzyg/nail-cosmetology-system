@@ -6,6 +6,7 @@
         //- el-radio-button(label="tech") 技师列表
         el-radio-button(label="businessReport") 营业报表
         el-radio-button(label="techReport") 技师报单
+      el-date-picker.time-now(@change="dateChange" v-model="date" size="medium")
       .count
         .count-item 现金:${{cashAmount}}
         .count-item 礼卡:${{giftCardAmount}}
@@ -59,6 +60,7 @@ export default {
   // },
   data() {
     return {
+      date: this.$algorithm.getDateStart(),
       dateBegin: this.$algorithm.getDateStart(),
       dataEnd: this.$algorithm.getDateStart(),
       rType: 'businessReport',
@@ -85,6 +87,13 @@ export default {
     this.setFirstSendObj('getData')
   },
   methods: {
+    async dateChange() {
+      console.log(this.date)
+      this.dateBegin = this.date
+      this.dataEnd = this.date
+      await this.getData()
+      this.setFirstSendObj('getData')
+    },
     webviewMessage(event) {
       // debugger
       // console.log('domReady', arguments)
@@ -104,7 +113,7 @@ export default {
     },
     getProjectInfoTotal(item) {
       let price = item.project.price || 0
-      item.additions.forEach((a) => {
+      item.additions.forEach(a => {
         let p = a.price || 0
         price += p
       })
@@ -116,7 +125,10 @@ export default {
       let waitingConfig = await this.$IDB.getAll('waitingConfig')
       if (scheduleData) {
         scheduleData.forEach(s => {
-          let techWaitingMap = this.$algorithm.computingTechWaitingTime(s, waitingConfig)
+          let techWaitingMap = this.$algorithm.computingTechWaitingTime(
+            s,
+            waitingConfig
+          )
           techWaitingMap.forEach((value, key, map) => {
             if (techMap.has(key)) {
               let techItem = techMap.get(key)
@@ -133,7 +145,22 @@ export default {
       }
       return new Map()
     },
+    clearReport() {
+      this.techList = []
+      this.orderList = []
+      this.paytotals = 0
+      this.cashAmount = 0
+      this.couponAmount = 0
+      this.creditCardAmount = 0
+      this.giftCardAmount = 0
+      this.commissionAccountTotal = 0
+      this.projectPrices = 0
+      this.waitingPriceTotal = 0
+      this.subsidyTotal = 0
+      this.tips = 0
+    },
     async getData() {
+      this.clearReport()
       let query = IDBKeyRange.bound(this.dateBegin, this.dataEnd)
       let data = await this.$IDB.getAllByIndex('checkoutList', 'date', query)
       let techData = await this.$IDB.getAll('technician')
@@ -174,8 +201,12 @@ export default {
             orderItem.projects += `,${projectInfo.project.name}`
             orderItem.tips = this.$fixNum(orderItem.tips + projectInfo.tip)
             let projectPrice = this.getProjectInfoTotal(projectInfo)
-            orderItem.projectPrice = this.$fixNum(orderItem.projectPrice + projectPrice)
-            orderItem.payTotal = this.$fixNum(orderItem.payTotal + projectInfo.tip + projectPrice)
+            orderItem.projectPrice = this.$fixNum(
+              orderItem.projectPrice + projectPrice
+            )
+            orderItem.payTotal = this.$fixNum(
+              orderItem.payTotal + projectInfo.tip + projectPrice
+            )
           } else {
             let projectPrice = this.getProjectInfoTotal(projectInfo)
             orderMap.set(projectInfo.id, {
@@ -186,16 +217,18 @@ export default {
               tips: projectInfo.tip,
               projectPrice,
               payTotal: this.$fixNum(projectInfo.tip + projectPrice),
-              orderInfo: [{
-                kind: projectInfo.kind,
-                project: projectInfo.project,
-                additions: projectInfo.additions,
-                assignItemID: projectInfo.assignItemID,
-                technicianID: projectInfo.technicianID,
-                technicianName: projectInfo.technicianName,
-                rate: projectInfo.rate,
-                tip: projectInfo.tip
-              }]
+              orderInfo: [
+                {
+                  kind: projectInfo.kind,
+                  project: projectInfo.project,
+                  additions: projectInfo.additions,
+                  assignItemID: projectInfo.assignItemID,
+                  technicianID: projectInfo.technicianID,
+                  technicianName: projectInfo.technicianName,
+                  rate: projectInfo.rate,
+                  tip: projectInfo.tip
+                }
+              ]
             })
           }
           // 生成技师信息
@@ -216,7 +249,8 @@ export default {
             orderName: projectInfo.name,
             orderPhone: projectInfo.phone,
             projectPrice: projectInfo.accountAndCommission.accountTotal,
-            payTotal: projectInfo.accountAndCommission.accountTotal + projectInfo.tip,
+            payTotal:
+              projectInfo.accountAndCommission.accountTotal + projectInfo.tip,
             checkoutID: item.id,
             createTime: item.createTime,
             date: item.date
@@ -226,11 +260,13 @@ export default {
             techItem.projectList.push(projectObj)
             techItem.tips = techItem.tips + projectObj.tip
             techItem.subsidys += projectObj.subsidy
-            techItem.projectPrices = techItem.projectPrices + projectObj.projectPrice
+            techItem.projectPrices =
+              techItem.projectPrices + projectObj.projectPrice
             techItem.payTotals = techItem.payTotals + projectObj.payTotal
             techItem.rates += projectObj.rate
             techItem.count += 1
-            techItem.commissionTotal += projectObj.accountAndCommission.commissionAccountTotal
+            techItem.commissionTotal +=
+              projectObj.accountAndCommission.commissionAccountTotal
           } else {
             let tech = techData.find(x => x.id == projectInfo.technicianID)
             let scoreObj = null
@@ -250,7 +286,8 @@ export default {
               rates: projectObj.rate,
               projectPrices: projectObj.projectPrice,
               payTotals: projectObj.payTotal,
-              commissionTotal: projectObj.accountAndCommission.commissionAccountTotal,
+              commissionTotal:
+                projectObj.accountAndCommission.commissionAccountTotal,
               projectList: [projectObj],
               count: 1
             })
@@ -270,14 +307,23 @@ export default {
       if (this.firstSendObj.domReady && this.firstSendObj.getData) {
         console.log('firstSendObj ready')
         this.$refs.printWebview.send('type-change', this.rType)
-        this.$refs.printWebview.send('data-change', this.orderList, this.techList, {
-          paytotals: this.paytotals,
-          commissionAccountTotal: this.commissionAccountTotal,
-          tips: this.tips,
-          projectPrices: this.projectPrices,
-          waitingPriceTotal: this.waitingPriceTotal,
-          subsidyTotal: this.subsidyTotal
-        })
+        this.$refs.printWebview.send(
+          'data-change',
+          this.orderList,
+          this.techList,
+          {
+            paytotals: this.paytotals, // 合计
+            cashAmount: this.cashAmount, // 现金
+            giftCardAmount: this.giftCardAmount, // 礼卡
+            creditCardAmount: this.creditCardAmount, // 信用卡
+            couponAmount: this.couponAmount, // 优惠券
+            commissionAccountTotal: this.commissionAccountTotal,
+            tips: this.tips,
+            projectPrices: this.projectPrices,
+            waitingPriceTotal: this.waitingPriceTotal,
+            subsidyTotal: this.subsidyTotal
+          }
+        )
       }
     }
   },
@@ -291,7 +337,11 @@ export default {
   },
   computed: {
     totals() {
-      return (this.cashAmount + this.giftCardAmount + this.creditCardAmount).toFixed(2)
+      return (
+        this.cashAmount +
+        this.giftCardAmount +
+        this.creditCardAmount
+      ).toFixed(2)
     }
   }
 }

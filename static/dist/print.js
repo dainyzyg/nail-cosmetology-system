@@ -167,6 +167,8 @@
 //
 //
 //
+//
+//
 
 
 
@@ -256,6 +258,10 @@
     },
     profits: function profits() {
       return this.correctNum(this.aggregatedData.projectPrices - this.aggregatedData.subsidyTotal - this.aggregatedData.waitingPriceTotal - this.aggregatedData.commissionAccountTotal);
+    },
+    cashProfits: function cashProfits() {
+      // alert(`${this.profits} - this.giftCardAmount - this.creditCardAmount - this.couponAmount`)
+      return this.correctNum(this.profits - this.aggregatedData.giftCardAmount - this.aggregatedData.creditCardAmount - this.aggregatedData.couponAmount);
     }
   },
   watch: {}
@@ -648,6 +654,31 @@ var render = function() {
                           _vm._s(_vm.aggregatedData.waitingPriceTotal) +
                           " 利润总数:$" +
                           _vm._s(_vm.profits)
+                      )
+                    ]
+                  )
+                ]),
+                _c("tr", [
+                  _c(
+                    "th",
+                    {
+                      staticStyle: { "text-align": "right" },
+                      attrs: { colspan: "6" }
+                    },
+                    [
+                      _vm._v(
+                        "实收总数:$" +
+                          _vm._s(_vm.aggregatedData.paytotals) +
+                          " 其中现金:$" +
+                          _vm._s(_vm.aggregatedData.cashAmount) +
+                          " 礼卡:$" +
+                          _vm._s(_vm.aggregatedData.giftCardAmount) +
+                          " 信用卡:$" +
+                          _vm._s(_vm.aggregatedData.creditCardAmount) +
+                          " 优惠券:$" +
+                          _vm._s(_vm.aggregatedData.couponAmount) +
+                          " 现金盈亏:$" +
+                          _vm._s(_vm.cashProfits)
                       )
                     ]
                   )

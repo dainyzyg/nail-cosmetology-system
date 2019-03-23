@@ -27,6 +27,8 @@
       tfoot
         tr
           th(colspan="6" style="text-align:right") 营业总数:${{aggregatedData.projectPrices}} 提成总数:${{commissionAccountTotal}} 小费补贴:${{aggregatedData.subsidyTotal}} 等待费用:${{aggregatedData.waitingPriceTotal}} 利润总数:${{profits}}
+        tr 
+          th(colspan="6" style="text-align:right") 实收总数:${{aggregatedData.paytotals}} 其中现金:${{aggregatedData.cashAmount}} 礼卡:${{aggregatedData.giftCardAmount}} 信用卡:${{aggregatedData.creditCardAmount}} 优惠券:${{aggregatedData.couponAmount}} 现金盈亏:${{cashProfits}}
     table( v-if="reportType=='techReport'" v-for="i in techList" cellspacing="0" cellpadding="0" style="width:100%;page-break-after: always;")
       caption 技师报单
       tfoot
@@ -182,6 +184,10 @@ export default {
     },
     profits() {
       return this.correctNum(this.aggregatedData.projectPrices - this.aggregatedData.subsidyTotal - this.aggregatedData.waitingPriceTotal - this.aggregatedData.commissionAccountTotal)
+    },
+    cashProfits() {
+      // alert(`${this.profits} - this.giftCardAmount - this.creditCardAmount - this.couponAmount`)
+      return this.correctNum(this.profits - this.aggregatedData.giftCardAmount - this.aggregatedData.creditCardAmount - this.aggregatedData.couponAmount)
     }
   },
   watch: {}

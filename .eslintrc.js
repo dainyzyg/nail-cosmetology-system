@@ -37,6 +37,7 @@ module.exports = {
     'dot-notation': 'off',
     'no-param-reassign': 'off',
     'standard/no-callback-literal': 'off',
+    'standard/computed-property-even-spacing': 'off',
     eqeqeq: 'off'
   }
 }

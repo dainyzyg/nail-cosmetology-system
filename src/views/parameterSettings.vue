@@ -5,6 +5,8 @@
       //-   el-time-picker(v-model="dateTimeNow")
       //- el-form-item(label='保底小费比例%')
       //-   el-input-number(v-model="miniFeePercent" :min="0" :max="100")
+      el-form-item(label='真实时间')
+        el-switch(v-model="realtime" @change="changeRealtime")
       el-form-item(label='必做提前计算时间')
         el-input-number(v-model="doAdvanceTime")
       //- el-form-item(label='用户等待时间')
@@ -46,8 +48,8 @@ const timeArray = [
   'weekendEndTime'
 ]
 const watch = {}
-timeArray.forEach((i) => {
-  watch[i] = (val) => {
+timeArray.forEach(i => {
+  watch[i] = val => {
     localStorage[i] = val
     // window.algorithm.initData()
   }
@@ -55,20 +57,36 @@ timeArray.forEach((i) => {
 export default {
   data() {
     const data = {}
-    timeArray.forEach((i) => {
+    timeArray.forEach(i => {
       data[i] = localStorage[i]
     })
+    let realtime = localStorage.realtime == 'true'
+
     return {
+      realtime,
       ...data,
-      dateTimeNow: localStorage.dateTimeNow ? new Date(localStorage.dateTimeNow) : new Date('2018/2/27')
+      dateTimeNow: localStorage.dateTimeNow
+        ? new Date(localStorage.dateTimeNow)
+        : new Date('2018/2/27')
     }
   },
-  created() { },
-  methods: {},
+  created() {},
+  methods: {
+    changeRealtime(val) {
+      localStorage.realtime = val
+    }
+  },
   watch: {
     ...watch,
     dateTimeNow(val) {
-      localStorage.dateTimeNow = new Date(2018, 1, 26, val.getHours(), val.getMinutes(), val.getSeconds()).toISOString()
+      localStorage.dateTimeNow = new Date(
+        2018,
+        1,
+        26,
+        val.getHours(),
+        val.getMinutes(),
+        val.getSeconds()
+      ).toISOString()
       this.$algorithm.timeDuration = 0
       this.$algorithm.initData()
     }
