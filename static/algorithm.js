@@ -194,7 +194,8 @@ window.algorithm = {
   batchComputingTechLastClock() {
     this.data.technicianList.forEach(x => this.computingTechLastClock(x))
     this.data.technicianList.sort((a, b) => {
-      let timeDiff = a.lastClock.relativeTime - b.lastClock.relativeTime
+      // let timeDiff = a.lastClock.relativeTime - b.lastClock.relativeTime
+      let timeDiff = this.compareLastClock(a, b)
       if (timeDiff == 0) return this.compareString(a.name, b.name)
       return timeDiff
     })
@@ -301,6 +302,48 @@ window.algorithm = {
     //   return timeDiff
     // })
     this.getClockSchedule()
+  },
+  compareLastClock(techA, techB) {
+    // 先 techA.lastClock.relativeTime - techB.lastClock.relativeTime
+    // 如果relativeTime是技师的出勤开始时间，那么就让relativeTime等于tech.lastEndClock.relativeTimeye
+    // 也就是技师之前的某一天的最后完成时间，然后在比较
+    let relativeTimeA = techA.lastClock.relativeTime
+    let relativeTimeB = techB.lastClock.relativeTime
+    let diff = relativeTimeA - relativeTimeB
+    if (diff != 0) {
+      return diff
+    }
+
+    if (techA.lastEndClock) {
+      let startTimeStr = techA.attendanceInfo.startTime
+      if (
+        techA.attendanceInfo.lunchTime <= startTimeStr &&
+        techA.attendanceInfo.lunchTimeEnd > startTimeStr
+      ) {
+        startTimeStr = techA.attendanceInfo.lunchTimeEnd
+      }
+      if (relativeTimeA == this.getTimeByStr(startTimeStr)) {
+        relativeTimeA = techA.lastEndClock.relativeTime
+      }
+    } else {
+      relativeTimeA = new Date(0)
+    }
+    if (techB.lastEndClock) {
+      let startTimeStr = techB.attendanceInfo.startTime
+      if (
+        techB.attendanceInfo.lunchTime <= startTimeStr &&
+        techB.attendanceInfo.lunchTimeEnd > startTimeStr
+      ) {
+        startTimeStr = techB.attendanceInfo.lunchTimeEnd
+      }
+      if (relativeTimeB == this.getTimeByStr(startTimeStr)) {
+        relativeTimeB = techB.lastEndClock.relativeTime
+      }
+    } else {
+      relativeTimeB = new Date(0)
+    }
+
+    return relativeTimeA - relativeTimeB
   },
   compareString(a, b) {
     if (a < b) {
@@ -414,6 +457,7 @@ window.algorithm = {
     }
     // 按相对时间排序（因为小项不过单）如果时间一样，小项优先级最低的做，其他优先级高的做
     technicianTimeList.sort((a, b) => {
+      // debugger
       // 由前到后的排序时间
       let timeA = a.relativeTimeStart.getTime() + a.delayTotal * 60 * 1000
       let timeB = b.relativeTimeStart.getTime() + b.delayTotal * 60 * 1000
@@ -431,7 +475,8 @@ window.algorithm = {
         a.projectItem.kind.orderRule == '由后到前' &&
         b.projectItem.kind.orderRule == '由后到前'
       ) {
-        let diff = b.tech.lastClock.relativeTime - a.tech.lastClock.relativeTime
+        // let diff = b.tech.lastClock.relativeTime - a.tech.lastClock.relativeTime
+        let diff = this.compareLastClock(b.tech, a.tech)
         if (diff == 0) return this.compareString(a.tech.name, b.tech.name)
         return diff
       }
@@ -441,7 +486,8 @@ window.algorithm = {
         a.projectItem.kind.orderRule == '由前到后' &&
         b.projectItem.kind.orderRule == '由前到后'
       ) {
-        let diff = a.tech.lastClock.relativeTime - b.tech.lastClock.relativeTime
+        // let diff = a.tech.lastClock.relativeTime - b.tech.lastClock.relativeTime
+        let diff = this.compareLastClock(a.tech, b.tech)
         if (diff == 0) return this.compareString(a.tech.name, b.tech.name)
         return diff
       }
@@ -631,7 +677,8 @@ window.algorithm = {
         a.projectItem.kind.orderRule == '由后到前' &&
         b.projectItem.kind.orderRule == '由后到前'
       ) {
-        let diff = b.tech.lastClock.relativeTime - a.tech.lastClock.relativeTime
+        // let diff = b.tech.lastClock.relativeTime - a.tech.lastClock.relativeTime
+        let diff = this.compareLastClock(b.tech, a.tech)
         if (diff == 0) return this.compareString(a.tech.name, b.tech.name)
         return diff
       }
@@ -641,7 +688,8 @@ window.algorithm = {
         a.projectItem.kind.orderRule == '由前到后' &&
         b.projectItem.kind.orderRule == '由前到后'
       ) {
-        let diff = a.tech.lastClock.relativeTime - b.tech.lastClock.relativeTime
+        // let diff = a.tech.lastClock.relativeTime - b.tech.lastClock.relativeTime
+        let diff = this.compareLastClock(a.tech, b.tech)
         if (diff == 0) return this.compareString(a.tech.name, b.tech.name)
         return diff
       }
@@ -704,7 +752,8 @@ window.algorithm = {
         a.projectItem.kind.orderRule == '由后到前' &&
         b.projectItem.kind.orderRule == '由后到前'
       ) {
-        let diff = b.tech.lastClock.relativeTime - a.tech.lastClock.relativeTime
+        // let diff = b.tech.lastClock.relativeTime - a.tech.lastClock.relativeTime
+        let diff = this.compareLastClock(b.tech, a.tech)
         if (diff == 0) return this.compareString(a.tech.name, b.tech.name)
         return diff
       }
@@ -714,7 +763,8 @@ window.algorithm = {
         a.projectItem.kind.orderRule == '由前到后' &&
         b.projectItem.kind.orderRule == '由前到后'
       ) {
-        let diff = a.tech.lastClock.relativeTime - b.tech.lastClock.relativeTime
+        // let diff = a.tech.lastClock.relativeTime - b.tech.lastClock.relativeTime
+        let diff = this.compareLastClock(a.tech, b.tech)
         if (diff == 0) return this.compareString(a.tech.name, b.tech.name)
         return diff
       }
@@ -779,7 +829,8 @@ window.algorithm = {
         a.projectItem.kind.orderRule == '由后到前' &&
         b.projectItem.kind.orderRule == '由后到前'
       ) {
-        let diff = b.tech.lastClock.relativeTime - a.tech.lastClock.relativeTime
+        // let diff = b.tech.lastClock.relativeTime - a.tech.lastClock.relativeTime
+        let diff = this.compareLastClock(b.tech, a.tech)
         if (diff == 0) return this.compareString(a.tech.name, b.tech.name)
         return diff
       }
@@ -789,7 +840,8 @@ window.algorithm = {
         a.projectItem.kind.orderRule == '由前到后' &&
         b.projectItem.kind.orderRule == '由前到后'
       ) {
-        let diff = a.tech.lastClock.relativeTime - b.tech.lastClock.relativeTime
+        // let diff = a.tech.lastClock.relativeTime - b.tech.lastClock.relativeTime
+        let diff = this.compareLastClock(a.tech, b.tech)
         if (diff == 0) return this.compareString(a.tech.name, b.tech.name)
         return diff
       }
@@ -958,7 +1010,8 @@ window.algorithm = {
 
     // 更新排序
     this.tempTechnicianList.sort((a, b) => {
-      let diff = a.lastClock.relativeTime - b.lastClock.relativeTime
+      // let diff = a.lastClock.relativeTime - b.lastClock.relativeTime
+      let diff = this.compareLastClock(a, b)
       if (diff == 0) return this.compareString(a.name, b.name)
       return diff
     })
@@ -1566,9 +1619,18 @@ window.algorithm = {
       orderItem.status = assignItem.status
     }
     // 更改技师最后完成时间
-    this.setTechLastClock(assignItem)
+    let tech = this.setTechLastClock(assignItem)
+    // 保存技师最后完成时间到数据库
+    this.saveTechLastClock(tech)
     this.assign()
     this.saveScheduleData()
+  },
+  async saveTechLastClock(tech) {
+    let techDB = await window.IDB.get('technician', tech.id)
+    if (techDB) {
+      techDB.lastEndClock = tech.lastClock
+      window.IDB.put('technician', techDB)
+    }
   },
   startAssignItem(assignItem) {
     if (
@@ -1624,7 +1686,8 @@ window.algorithm = {
         this.computingTechLastClock(tech)
         // 更新排序
         this.data.technicianList.sort((a, b) => {
-          let diff = a.lastClock.relativeTime - b.lastClock.relativeTime
+          // let diff = a.lastClock.relativeTime - b.lastClock.relativeTime
+          let diff = this.compareLastClock(a, b)
           if (diff == 0) return this.compareString(a.name, b.name)
           return diff
         })
@@ -1723,10 +1786,13 @@ window.algorithm = {
     tech.lastClock.assignID = assignItem.id
     // 更新排序
     this.data.technicianList.sort((a, b) => {
-      let diff = a.lastClock.relativeTime - b.lastClock.relativeTime
+      // let diff = a.lastClock.relativeTime - b.lastClock.relativeTime
+      let diff = this.compareLastClock(a, b)
       if (diff == 0) return this.compareString(a.name, b.name)
       return diff
     })
+
+    return tech
   },
   async initData() {
     this.data.orderObj = {}

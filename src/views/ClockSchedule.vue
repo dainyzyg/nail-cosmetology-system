@@ -21,7 +21,7 @@
         | 已分配
         i.el-icon-circle-plus-outline.add-assign-item(@click="assignVisible=true")
       .panet-content
-        AssignItemPopover(assign v-for="i,index in data.assignList" :key="i.id" :assignItem="i" :index="index")
+        AssignItemPopover(@modifyAssign="openModifyAssignModal"   assign v-for="i,index in data.assignList" :key="i.id" :assignItem="i" :index="index")
     .panel.clock-schedule
       .panel-title
         | 排钟表
@@ -91,11 +91,13 @@
             //-     i.el-icon-circle-plus-outline
     OrderModal(:visible.sync="orderVisible" :technicianList="technicianList" :title="title" :data="selectedOrder" @save="orderSave" @delete="deleteOrder")
     AssignModal(:visible.sync="assignVisible")
+    ModifyAssignModal(:visible.sync="modifyAssignVisible" :assignItem='modifyAssignItem')
     TimeCountManageModal(:visible.sync="timeCountVisible" :data="data")
 </template>
 <script>
 import OrderModal from '@/components/OrderModal'
 import AssignModal from '@/components/AssignModal'
+import ModifyAssignModal from '@/components/ModifyAssignModal'
 import AssignItemPopover from '@/components/AssignItemPopover'
 import TimeCountManageModal from '@/components/TimeCountManageModal'
 
@@ -103,11 +105,13 @@ export default {
   components: {
     AssignModal,
     OrderModal,
+    ModifyAssignModal,
     AssignItemPopover,
     TimeCountManageModal
   },
   data() {
     return {
+      modifyAssignItem: null,
       isRealtime: localStorage.realtime == 'true',
       realtime: new Date().toLocaleTimeString('en'),
       interval: null,
@@ -118,6 +122,7 @@ export default {
       selectedOrder: { orderInfo: [], isArrive: 'notArrive' },
       orderVisible: false,
       assignVisible: false,
+      modifyAssignVisible: false,
       workBeginTime: this.$algorithm.workBeginTime(),
       workEndTime: this.$algorithm.workEndTime(),
       dateStart: this.$algorithm.getDateStart(),
@@ -137,11 +142,15 @@ export default {
     clearInterval(this.interval)
   },
   methods: {
+    openModifyAssignModal(assignItem) {
+      this.modifyAssignItem = assignItem
+      this.modifyAssignVisible = true
+    },
     showRealtime() {
       if (this.isRealtime) {
         this.interval = setInterval(() => {
           this.realtime = new Date().toLocaleTimeString('en')
-          console.log('realtime')
+          // console.log('realtime')
         }, 1000)
       }
     },

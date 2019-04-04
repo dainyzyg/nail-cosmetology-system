@@ -65,10 +65,12 @@ export default {
     },
     async getAttendanceInfo() {
       const attendanceInfo = {}
-      await this.$IDB.executeTransaction('attendance', 'readonly', (t) => {
+      await this.$IDB.executeTransaction('attendance', 'readonly', t => {
         const store = t.objectStore('attendance')
-        const request = store.index('date').openCursor(IDBKeyRange.only(this.dateBegin))
-        request.onsuccess = (event) => {
+        const request = store
+          .index('date')
+          .openCursor(IDBKeyRange.only(this.dateBegin))
+        request.onsuccess = event => {
           const cursor = event.target.result
           if (cursor) {
             attendanceInfo[cursor.value.id] = cursor.value
@@ -85,41 +87,63 @@ export default {
         // 计算午餐结束时间
         const hour = parseInt(info.lunchTime.split(':')[0])
         const minute = parseInt(info.lunchTime.split(':')[1])
-        const lunchTimeStart = new Date(this.dataTime.getTime() + (hour * 60 + minute) * 60 * 1000)
-        const lunchTimeEnd = new Date(lunchTimeStart.getTime() + info.lunchTimeDuration * 60 * 1000)
-        info.lunchTimeEnd = lunchTimeEnd.toLocaleTimeString('en-GB').replace(/:00$/, '')
+        const lunchTimeStart = new Date(
+          this.dataTime.getTime() + (hour * 60 + minute) * 60 * 1000
+        )
+        const lunchTimeEnd = new Date(
+          lunchTimeStart.getTime() + info.lunchTimeDuration * 60 * 1000
+        )
+        info.lunchTimeEnd = lunchTimeEnd
+          .toLocaleTimeString('en-GB')
+          .replace(/:00$/, '')
 
         this.$IDB.put('attendance', info)
+        this.saveTechLastAttendanceInfo(info)
       } else {
         this.$IDB.delete('attendance', [info.id, info.date])
       }
       this.$algorithm.initData()
     },
+    async saveTechLastAttendanceInfo(attendanceInfo) {
+      let tech = await this.$IDB.get('technician', attendanceInfo.id)
+      if (tech) {
+        tech.attendanceInfo = attendanceInfo
+        this.$IDB.put('technician', tech)
+      }
+    },
     async getData() {
       this.tableData = []
-      await this.$IDB.executeTransaction('technician', 'readonly', (t) => {
+      await this.$IDB.executeTransaction('technician', 'readonly', t => {
         const store = t.objectStore('technician')
         const request = store.index('index').openCursor()
-        request.onsuccess = (event) => {
+        request.onsuccess = event => {
           const cursor = event.target.result
           if (cursor) {
             this.tableData.push(cursor.value)
             if (!this.attendanceInfo[cursor.value.id]) {
-              this.$set(this.attendanceInfo, cursor.value.id, {
-                lunchTime: '12:00',
-                lunchTimeDuration: 30,
-                startTime: this.$algorithm
-                  .workBeginTime()
-                  .toLocaleTimeString('en-GB')
-                  .replace(/:00$/, ''),
-                endTime: this.$algorithm
-                  .workEndTime()
-                  .toLocaleTimeString('en-GB')
-                  .replace(/:00$/, ''),
-                isAttend: false,
-                id: cursor.value.id,
-                date: this.dateBegin
-              })
+              let tech = cursor.value
+              let attendanceInfo = tech.attendanceInfo
+              if (attendanceInfo) {
+                attendanceInfo.date = this.dateBegin
+                attendanceInfo.isAttend = false
+              } else {
+                attendanceInfo = {
+                  lunchTime: '12:00',
+                  lunchTimeDuration: 30,
+                  startTime: this.$algorithm
+                    .workBeginTime()
+                    .toLocaleTimeString('en-GB')
+                    .replace(/:00$/, ''),
+                  endTime: this.$algorithm
+                    .workEndTime()
+                    .toLocaleTimeString('en-GB')
+                    .replace(/:00$/, ''),
+                  isAttend: false,
+                  id: cursor.value.id,
+                  date: this.dateBegin
+                }
+              }
+              this.$set(this.attendanceInfo, cursor.value.id, attendanceInfo)
             }
             cursor.continue()
           }

@@ -6,6 +6,7 @@
     el-button(v-if="assignItem.status=='start'||assignItem.status=='fix'" type="danger" size="medium" @click="cancelAssign") 取消
     el-button(v-if="assignItem.status=='fix'" type="success" size="medium" @click="startProject") 开始
     el-button(v-if="assignItem.status=='start'" type="warning" size="medium" @click="endProject") 结束
+    el-button(v-if="['start','fix'].includes(assignItem.status)" type="info" size="medium" @click="modifyProject") 修改
     .assign-btn(slot="reference" :style="{backgroundColor}" :type="getAssignItemType()" size="medium" plain)
       .btn-line
         | {{assignItem.techName}}
@@ -23,7 +24,7 @@
 <script>
 export default {
   props: ['assignItem', 'activeAssignTab', 'index'],
-  created() { },
+  created() {},
   data() {
     return {
       visible: false
@@ -33,7 +34,10 @@ export default {
     getUndoProjects() {
       let order = this.$algorithm.data.orderObj[this.assignItem.orderID]
       if (order) {
-        return order.orderInfo.filter(f => !f.assignItemID).map(m => m.project.name).join(' ')
+        return order.orderInfo
+          .filter(f => !f.assignItemID)
+          .map(m => m.project.name)
+          .join(' ')
       }
       return ''
     },
@@ -86,6 +90,10 @@ export default {
     unshiftToAssignList(assignItem, status) {
       this.$algorithm.unshiftToAssignList(assignItem, status, this.index)
       this.visible = false
+    },
+    modifyProject() {
+      console.log('modify-assign')
+      this.$emit('modifyAssign', this.assignItem)
     }
   },
   computed: {

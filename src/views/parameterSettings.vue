@@ -74,6 +74,7 @@ export default {
   methods: {
     changeRealtime(val) {
       localStorage.realtime = val
+      this.$algorithm.initData()
     }
   },
   watch: {
