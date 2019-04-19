@@ -1,5 +1,5 @@
 <template lang="pug">
- el-dialog(:title='title' :visible.sync='dialogVisible' width="96vw" top="2vh" style="overflow:hidden;")
+ el-dialog(:title='titleCompute' :visible.sync='dialogVisible' width="96vw" top="2vh" style="overflow:hidden;")
   .dialog-body.flex-c
     el-form(:inline="true" label-width="80px")
       el-form-item(label='名称')
@@ -84,6 +84,22 @@ export default {
     }
   },
   methods: {
+    formatTime(str, hasMeridiem) {
+      if (!str) return ''
+      let meridiem = 'AM'
+      const array = str.split(':')
+      let hours = parseInt(array[0])
+      const minutes = array[1]
+      if (hours >= 12) {
+        meridiem = 'PM'
+        if (hours > 12) {
+          hours -= 12
+        }
+      } else if (hours == 0) {
+        hours = 12
+      }
+      return `${hours}:${minutes}${hasMeridiem ? meridiem : ''}`
+    },
     completeAsk() {
       let isAked = true
       const newSelectAdd = []
@@ -103,7 +119,7 @@ export default {
           kind: this.selectedKind,
           project: this.selectedProject,
           additions: [...this.selectedAdditions],
-          technicians: this.selectedTechnicians.map((item) => {
+          technicians: this.selectedTechnicians.map(item => {
             return { id: item.id, name: item.name }
           })
         }
@@ -112,7 +128,9 @@ export default {
       }
     },
     addProject() {
-      if (this.data.orderInfo.find((x) => x.project.id == this.selectedProject.id)) {
+      if (
+        this.data.orderInfo.find(x => x.project.id == this.selectedProject.id)
+      ) {
         this.$alert('无法添加重复的项目！', '提示', {
           confirmButtonText: '确定',
           type: 'warning'
@@ -120,7 +138,9 @@ export default {
         return
       }
       this.askResult = {}
-      this.askAddList = this.additionList.filter((a) => a.ask && !this.selectedAdditions.find((s) => s.id == a.id))
+      this.askAddList = this.additionList.filter(
+        a => a.ask && !this.selectedAdditions.find(s => s.id == a.id)
+      )
       if (this.askAddList.length > 0) {
         this.addAskVisible = true
         return
@@ -129,17 +149,17 @@ export default {
         kind: this.selectedKind,
         project: this.selectedProject,
         additions: [...this.selectedAdditions],
-        technicians: this.selectedTechnicians.map((item) => {
+        technicians: this.selectedTechnicians.map(item => {
           return { id: item.id, name: item.name }
         })
       }
       this.data.orderInfo.push(orderItem)
     },
     async getKindList(storeName, dataName) {
-      await this.$IDB.executeTransaction(storeName, 'readonly', (t) => {
+      await this.$IDB.executeTransaction(storeName, 'readonly', t => {
         const store = t.objectStore(storeName)
         const request = store.openCursor()
-        request.onsuccess = (event) => {
+        request.onsuccess = event => {
           const cursor = event.target.result
           if (cursor) {
             this[dataName].push(cursor.value)
@@ -151,10 +171,12 @@ export default {
     async getList(storeName, dataName, parentID) {
       // this[dataName] = []
       const list = []
-      await this.$IDB.executeTransaction([storeName], 'readonly', (t) => {
+      await this.$IDB.executeTransaction([storeName], 'readonly', t => {
         const store = t.objectStore(storeName)
-        const request = store.index('parentID').openCursor(IDBKeyRange.only(parentID))
-        request.onsuccess = (event) => {
+        const request = store
+          .index('parentID')
+          .openCursor(IDBKeyRange.only(parentID))
+        request.onsuccess = event => {
           const cursor = event.target.result
           if (cursor) {
             list.push(cursor.value)
@@ -204,16 +226,26 @@ export default {
       }
     },
     async deleteOrder() {
-      const r = await this.$confirm('此操作将永久删除该订单, 是否继续?', '提示', {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'warning'
-      })
+      const r = await this.$confirm(
+        '此操作将永久删除该订单, 是否继续?',
+        '提示',
+        {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning'
+        }
+      )
       if (r != 'confirm') return
       this.$emit('delete')
     }
   },
-  computed: {},
+  computed: {
+    titleCompute() {
+      let timeStr = this.title.split('-')[0]
+      let positionStr = this.title.split('-')[1]
+      return `${this.formatTime(timeStr)}-${positionStr}`
+    }
+  },
   watch: {
     selectedProject(val) {
       this.selectedAdditions = []

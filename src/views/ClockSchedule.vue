@@ -308,7 +308,7 @@ export default {
       this.showChange = false
       this.changeList = []
     },
-    formatTime(str) {
+    formatTime(str, hasMeridiem) {
       if (!str) return ''
       let meridiem = 'AM'
       const array = str.split(':')
@@ -322,7 +322,7 @@ export default {
       } else if (hours == 0) {
         hours = 12
       }
-      return `${hours}:${minutes} ${meridiem}`
+      return `${hours}:${minutes}${hasMeridiem ? meridiem : ''}`
     },
     manage() {
       this.timeCountVisible = true

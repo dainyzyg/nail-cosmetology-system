@@ -51,7 +51,7 @@ export default {
       }
       return ''
     },
-    formatTime(str) {
+    formatTime(str, hasMeridiem) {
       if (!str) return ''
       let meridiem = 'AM'
       const array = str.split(':')
@@ -65,7 +65,7 @@ export default {
       } else if (hours == 0) {
         hours = 12
       }
-      return `${hours}:${minutes} ${meridiem}`
+      return `${hours}:${minutes}${hasMeridiem ? meridiem : ''}`
     },
     getAssignItemType() {
       if (this.assignItem.status == 'fix') {
