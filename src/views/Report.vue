@@ -124,6 +124,7 @@ export default {
       let scheduleData = await this.$IDB.getAll('schedule', query)
       let waitingConfig = await this.$IDB.getAll('waitingConfig')
       if (scheduleData) {
+        // debugger
         scheduleData.forEach(s => {
           let techWaitingMap = this.$algorithm.computingTechWaitingTime(
             s,

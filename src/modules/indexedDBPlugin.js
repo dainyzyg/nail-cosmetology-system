@@ -100,10 +100,10 @@ const IDB = {
       }
     })
   },
-  async getAll(osName) {
+  async getAll(osName, query = null) {
     const store = await this.getObjectStore(osName)
     return new Promise((resolve, reject) => {
-      const request = store.getAll()
+      const request = store.getAll(query)
       request.onerror = e => {
         reject(e)
       }
@@ -254,9 +254,15 @@ function initIndexedDB(Vue) {
     createStoreAndIndex(event, 'project', ['parentID'], { keyPath: 'id' })
     createStoreAndIndex(event, 'addition', ['parentID'], { keyPath: 'id' })
     createStoreAndIndex(event, 'technician', ['index'], { keyPath: 'id' })
-    createStoreAndIndex(event, 'order', ['orderDate', 'preorderTime'], { keyPath: 'id' })
-    createStoreAndIndex(event, 'attendance', ['date'], { keyPath: ['id', 'date'] })
-    createStoreAndIndex(event, 'assign', ['date', 'orderID'], { keyPath: ['orderID', 'projectID'] })
+    createStoreAndIndex(event, 'order', ['orderDate', 'preorderTime'], {
+      keyPath: 'id'
+    })
+    createStoreAndIndex(event, 'attendance', ['date'], {
+      keyPath: ['id', 'date']
+    })
+    createStoreAndIndex(event, 'assign', ['date', 'orderID'], {
+      keyPath: ['orderID', 'projectID']
+    })
     createStoreAndIndex(event, 'assignList', [], { keyPath: 'date' })
     createStoreAndIndex(event, 'feeInfo', [], { keyPath: 'percentage' })
     createStoreAndIndex(event, 'devData', [], { keyPath: 'name' })
