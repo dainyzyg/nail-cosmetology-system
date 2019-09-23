@@ -28,6 +28,9 @@ window.algorithm = {
     unmatchOrderList: []
     // techStatus: {} // statue:free busy
   },
+  isRealtime() {
+    return localStorage.realtime == 'true'
+  },
   getDateNow() {
     let isRealtime = localStorage.realtime == 'true'
     if (isRealtime) {
@@ -507,9 +510,7 @@ window.algorithm = {
       } else {
         // else中是跳过的技师
         // 订单id，项目id，技师id，三个id作为唯一标示
-        let id = `${order.id}-${techItem.projectItem.project.id}-${
-          techItem.tech.id
-        }`
+        let id = `${order.id}-${techItem.projectItem.project.id}-${techItem.tech.id}`
         // 是覆盖还是只保存第一次的？this.jumpTechMap.has(id)
         this.jumpTechMap.set(id, {
           orderID: order.id,
