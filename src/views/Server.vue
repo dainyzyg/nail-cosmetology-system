@@ -1,39 +1,32 @@
 <template lang="pug">
   .page.col(v-if="true")
-    .header Server
-    //- ClockTable(:assignObject="assignObject")
+    .header 请使用PC或移动端浏览器访问：http://{{address}}
 </template>
 <script>
-import ClockTable from '@/components/ClockTable'
-
 export default {
-  components: {
-    ClockTable
-  },
+  components: {},
   data() {
     return {
-      assignObject: {
-        technicianList: [],
-        preAssignList: [],
-        historyPreAssignList: [],
-        dateNow: new Date()
-      }
+      address: ''
     }
   },
   created() {
-    // this.getData()
+    this.getIPAdress()
   },
   methods: {
-    async getData() {
-      // this.assignObject = await this.$algorithm.getAssignList()
+    getIPAdress() {
+      this.address = this.$algorithm.getIPAdress()
     }
   }
 }
 </script>
 <style scoped>
 .header {
-  background: slategray;
+  /* background: slategray; */
   flex: 0 0 50px;
+  font-size: 30px;
+  padding: 30px;
+  color: #606266;
 }
 .content {
   flex: 1;
