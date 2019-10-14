@@ -7,6 +7,8 @@ import indexedDBPlugin from './modules/indexedDBPlugin'
 // import algorithm from './modules/algorithm'
 
 Vue.config.productionTip = false
+// 设置环境变量
+window.ENV = process.env.NODE_ENV
 
 Vue.use(indexedDBPlugin)
 // Vue.use(algorithm)
@@ -24,5 +26,5 @@ Vue.config.errorHandler = function(err, vm, info) {
 new Vue({
   el: '#app',
   router,
-  render: (h) => h(App)
+  render: h => h(App)
 })
