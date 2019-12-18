@@ -62,17 +62,17 @@ export default {
   },
   methods: {
     getFixedTableName(fixedTableList) {
-      return fixedTableList.map((x) => {
-        let item = this.workingTableList.find((y) => y.id == x)
+      return fixedTableList.map(x => {
+        let item = this.workingTableList.find(y => y.id == x)
         if (item) return item.type
         return ''
       })
     },
     async getWorkingTable() {
-      await this.$IDB.executeTransaction('workingTable', 'readonly', (t) => {
+      await this.$IDB.executeTransaction('workingTable', 'readonly', t => {
         const store = t.objectStore('workingTable')
         const request = store.getAll()
-        request.onsuccess = (event) => {
+        request.onsuccess = event => {
           const result = event.target.result
           if (result) {
             this.workingTableList = result
@@ -81,10 +81,10 @@ export default {
       })
     },
     async getKindList() {
-      await this.$IDB.executeTransaction(['kind'], 'readonly', (t) => {
+      await this.$IDB.executeTransaction(['kind'], 'readonly', t => {
         const store = t.objectStore('kind')
         const request = store.openCursor()
-        request.onsuccess = (event) => {
+        request.onsuccess = event => {
           const cursor = event.target.result
           if (cursor) {
             this.kindList.push(cursor.value)
@@ -95,10 +95,10 @@ export default {
     },
     async getData() {
       let tableData = []
-      await this.$IDB.executeTransaction('technician', 'readonly', (t) => {
+      await this.$IDB.executeTransaction('technician', 'readonly', t => {
         const store = t.objectStore('technician')
         const request = store.index('index').openCursor()
-        request.onsuccess = (event) => {
+        request.onsuccess = event => {
           const cursor = event.target.result
           if (cursor) {
             cursor.value.fixedTableList = cursor.value.fixedTableList || []
@@ -130,7 +130,16 @@ export default {
         this.addVisible = false
         this.getData()
       } catch (e) {
-        this.$alert(e.message, '错误提示', {
+        let errMessage = e.message
+        if (
+          !errMessage &&
+          e.target &&
+          e.target.error &&
+          e.target.error.message
+        ) {
+          errMessage = e.target.error.message
+        }
+        this.$alert(errMessage, '错误提示', {
           confirmButtonText: '确定',
           type: 'error'
         })
@@ -148,11 +157,15 @@ export default {
       this.addVisible = true
     },
     async remove(id) {
-      const r = await this.$confirm('此操作将永久删除该条记录, 是否继续?', '提示', {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'warning'
-      })
+      const r = await this.$confirm(
+        '此操作将永久删除该条记录, 是否继续?',
+        '提示',
+        {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning'
+        }
+      )
       if (r != 'confirm') return
       await this.$IDB.delete('technician', id)
       this.getData()
@@ -166,7 +179,10 @@ export default {
     getNewID() {
       const pn = performance.now()
       const time = new Date().getTime()
-      const pnStr = `${pn.toString().replace(/\d+\.(\d*)/, '$1')}000`.substr(0, 3)
+      const pnStr = `${pn.toString().replace(/\d+\.(\d*)/, '$1')}000`.substr(
+        0,
+        3
+      )
       const timeStr = `${time}${pnStr}`
       return parseInt(timeStr)
     }

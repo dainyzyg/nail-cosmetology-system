@@ -233,13 +233,26 @@ function createStoreAndIndex(event, osName, indexs, option) {
     }
   }
 }
+
+function createIndex(event, osName, index, indexOption) {
+  const db = event.target.result
+  const t = event.target.transaction
+  if (!db.objectStoreNames.contains(osName)) {
+    db.createObjectStore(osName)
+  }
+  const os = t.objectStore(osName)
+  if (!os.indexNames.contains(index)) {
+    os.createIndex(index, index, indexOption)
+  }
+}
+
 function initIndexedDB(Vue) {
   Object.defineProperty(Vue.prototype, '$IDB', {
     get() {
       return IDB
     }
   })
-  const openRequest = indexedDB.open('MyDatabase', 18)
+  const openRequest = indexedDB.open('MyDatabase', 19)
   openRequest.onerror = event => {
     console.log(event, event.target.error.message)
   }
@@ -254,6 +267,7 @@ function initIndexedDB(Vue) {
     createStoreAndIndex(event, 'project', ['parentID'], { keyPath: 'id' })
     createStoreAndIndex(event, 'addition', ['parentID'], { keyPath: 'id' })
     createStoreAndIndex(event, 'technician', ['index'], { keyPath: 'id' })
+    createIndex(event, 'technician', 'name', { unique: true })
     createStoreAndIndex(event, 'order', ['orderDate', 'preorderTime'], {
       keyPath: 'id'
     })
