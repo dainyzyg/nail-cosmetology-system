@@ -408,6 +408,7 @@ window.algorithm = {
       jumpTechMap: this.jumpTechMap,
       date: this.getDateStart()
     })
+    window.algDataChange.scheduleDataChange()
   },
   assign() {
     this.data.assignList.sort(
@@ -1643,6 +1644,8 @@ window.algorithm = {
     this.saveTechLastClock(tech)
     this.assign()
     this.saveScheduleData()
+
+    window.algDataChange.assignItemChange()
   },
   async saveTechLastClock(tech) {
     let techDB = await window.IDB.get('technician', tech.id)
@@ -1687,6 +1690,8 @@ window.algorithm = {
     this.setTechLastClock(assignItem)
     this.assign()
     this.saveScheduleData()
+
+    window.algDataChange.assignItemChange()
   },
   cancelAssignItem(assignItem, index) {
     try {
@@ -1713,6 +1718,8 @@ window.algorithm = {
       }
       this.assign()
       this.saveScheduleData()
+
+      window.algDataChange.assignListChange()
     }
   },
   manuallyUnshiftToAssignList(assignItem) {
@@ -1733,6 +1740,8 @@ window.algorithm = {
     this.setTechLastClock(assignItem)
     this.assign()
     this.saveScheduleData()
+
+    window.algDataChange.assignListChange()
   },
   unshiftToAssignList(assignItem, status, index) {
     if (status == 'start') {
@@ -1779,6 +1788,9 @@ window.algorithm = {
     this.setTechLastClock(assignItem)
     this.assign()
     this.saveScheduleData()
+
+    // socket.io 数据变化 出发事件
+    window.algDataChange.assignListChange()
     // orderObj
   },
   setTechLastClock(assignItem) {
