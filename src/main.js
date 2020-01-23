@@ -9,6 +9,7 @@ import indexedDBPlugin from './modules/indexedDBPlugin'
 Vue.config.productionTip = false
 // 设置环境变量
 window.ENV = process.env.NODE_ENV
+window.Vue = Vue
 
 Vue.use(indexedDBPlugin)
 // Vue.use(algorithm)
