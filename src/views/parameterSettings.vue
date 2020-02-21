@@ -7,6 +7,8 @@
       //-   el-input-number(v-model="miniFeePercent" :min="0" :max="100")
       el-form-item(label='真实时间')
         el-switch(v-model="realtime" @change="changeRealtime")
+      el-form-item(label='当前日期' v-if="!realtime")
+        el-date-picker(@change="dateChange" v-model="fixedDate")
       el-form-item(label='必做提前计算时间')
         el-input-number(v-model="doAdvanceTime")
       //- el-form-item(label='用户等待时间')
@@ -61,20 +63,36 @@ export default {
       data[i] = localStorage[i]
     })
     let realtime = localStorage.realtime == 'true'
-
+    let fixedDate = new Date(localStorage.dateTimeNow || '2018/2/26')
     return {
+      fixedDate,
       realtime,
       ...data,
       dateTimeNow: localStorage.dateTimeNow
         ? new Date(localStorage.dateTimeNow)
-        : new Date('2018/2/27')
+        : new Date('2018/2/26')
     }
   },
   created() {},
   methods: {
-    changeRealtime(val) {
+    async dateChange() {
+      let localDateTimeNow = new Date(localStorage.dateTimeNow || '2018/2/26')
+      localStorage.dateTimeNow = new Date(
+        this.fixedDate.getFullYear(),
+        this.fixedDate.getMonth(),
+        this.fixedDate.getDate(),
+        localDateTimeNow.getHours(),
+        localDateTimeNow.getMinutes(),
+        localDateTimeNow.getSeconds()
+      ).toISOString()
+      this.$algorithm.timeDuration = 0
+      await this.$algorithm.initData()
+      window.algDataChange.scheduleDataChange()
+    },
+    async changeRealtime(val) {
       localStorage.realtime = val
-      this.$algorithm.initData()
+      await this.$algorithm.initData()
+      window.algDataChange.scheduleDataChange()
     }
   },
   watch: {

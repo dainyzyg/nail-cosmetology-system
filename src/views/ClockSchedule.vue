@@ -60,14 +60,17 @@
               .change-modal(v-if="showChange")
                 i.el-icon-circle-check-outline(v-if="(!positionObj[i.time+'-'+j]||positionObj[i.time+'-'+j].number==1)&&changeList.length<2&&!changeList.includes(i.time+'-'+j)")
                 i.el-icon-circle-check(v-if="changeList.includes(i.time+'-'+j)")
+                //- i {{j}}
+                //- i {{i}}
               el-button.schedule-btn(v-if="positionObj[i.time+'-'+j]" slot="reference" :type="getOrderType(positionObj[i.time+'-'+j])" size="medium" plain)
                 .schedule-btn-line
                   .name {{positionObj[i.time+'-'+j].name}}
                   .number {{positionObj[i.time+'-'+j].number+'/'+positionObj[i.time+'-'+j].count}}
                 .project-group
-                  .project-item(v-for="k in orderObj[positionObj[i.time+'-'+j].orderID].orderInfo||[]")
+                  .project-item(v-for="k in getOrderInfo(orderObj[positionObj[i.time+'-'+j].orderID])")
                     .project-name {{k.project.name}}
                     .project-tech {{getDesignatedTech(k.technicians)}}
+                  //- divider
                 //- .schedule-btn-line
                 //-   .name {{positionObj[i.time+'-'+j].projects}}
                 //- .divider
@@ -78,13 +81,15 @@
             .schedule-line-order(v-for="j in getOverFlowOrder(i)" @click="selectOrder(j.position)")
               .change-modal(v-if="showChange")
                 i.el-icon-circle-check-outline(v-if="(!positionObj[j.position]||positionObj[j.position].number==1)&&changeList.length<2&&!changeList.includes(i.time+'-'+j)")
-                i.el-icon-circle-check(v-if="changeList.includes(i.time+'-'+j)")
+                i.el-icon-circle-check(v-if="changeList.includes(j.position)")
+                //- i {{j.position}}
+                //- i {{i}}
               el-button.schedule-btn(slot="reference" :type="getOrderType(j)" size="medium" plain)
                 .schedule-btn-line
                   .name {{j.name}}
                   .number {{j.number+'/'+j.count}}
                 .project-group
-                  .project-item(v-for="k in orderObj[j.orderID].orderInfo||[]")
+                  .project-item(v-for="k in getOrderInfo(orderObj[j.orderID])")
                     .project-name {{k.project.name}}
                     .project-tech {{getDesignatedTech(k.technicians)}}
             //- .add-schedule
@@ -142,6 +147,12 @@ export default {
     clearInterval(this.interval)
   },
   methods: {
+    getOrderInfo(orderItem) {
+      if (!orderItem) {
+        return []
+      }
+      return orderItem.orderInfo || []
+    },
     openModifyAssignModal(assignItem) {
       this.modifyAssignItem = assignItem
       this.modifyAssignVisible = true
@@ -351,15 +362,25 @@ export default {
       // return isFree
     },
     dateTimeNowChange(val) {
+      let localDateTimeNow = new Date(localStorage.dateTimeNow || '2018/2/26')
       localStorage.dateTimeNow = new Date(
-        2018,
-        1,
-        26,
+        localDateTimeNow.getFullYear(),
+        localDateTimeNow.getMonth(),
+        localDateTimeNow.getDate(),
         val.getHours(),
         val.getMinutes(),
         val.getSeconds()
       ).toISOString()
+      // localStorage.dateTimeNow = new Date(
+      //   2018,
+      //   1,
+      //   26,
+      //   val.getHours(),
+      //   val.getMinutes(),
+      //   val.getSeconds()
+      // ).toISOString()
       this.assign()
+      window.algDataChange.scheduleDataChange()
     },
     async getSchedule() {
       const r = await this.$IDB.get('schedule', this.dateStart)
@@ -580,9 +601,11 @@ export default {
           let result = false
           const positionItem = this.positionObj[x]
           if (
+            this.orderObj[positionItem.orderID] &&
             positionItem.timeStr > position.timeStr &&
             positionItem.number > 1
           ) {
+            console.log(positionItem)
             let prevPositionItem = this.orderObj[positionItem.orderID]
               .timePositions[positionItem.number - 2]
             if (
@@ -672,8 +695,10 @@ export default {
         return
       }
       if (this.changeList.includes(id)) {
+        console.log('if')
         this.changeList = this.changeList.filter(x => x != id)
       } else if (this.changeList.length < 2) {
+        console.log('else')
         this.changeList.push(id)
       }
     },
@@ -682,7 +707,10 @@ export default {
         return this.clickChange(id)
       }
       this.title = id
-      if (this.positionObj[this.title]) {
+      if (
+        this.positionObj[this.title] &&
+        this.orderObj[this.positionObj[this.title].orderID]
+      ) {
         this.selectedOrder = this.orderObj[this.positionObj[this.title].orderID]
       } else {
         this.selectedOrder = { orderInfo: [], isArrive: 'notArrive' }

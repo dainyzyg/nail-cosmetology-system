@@ -57,7 +57,7 @@ window.algorithm = {
 
     const date = localStorage.dateTimeNow
       ? new Date(localStorage.dateTimeNow)
-      : new Date('2018/2/27')
+      : new Date('2018/2/26')
 
     return new Date(date.getTime() + this.timeDuration)
   },
@@ -1826,6 +1826,16 @@ window.algorithm = {
     return tech
   },
   async initData() {
+    // refresh Date
+    let nextDateMS =
+      new Date(new Date().toDateString()).getTime() +
+      24 * 60 * 60 * 1000 -
+      new Date().getTime()
+    setTimeout(async () => {
+      await this.initData()
+      window.algDataChange.scheduleDataChange()
+    }, nextDateMS)
+
     this.data.orderObj = {}
     this.data.positionObj = { maxIndex: 0 }
     this.data.technicianList = []
@@ -1874,6 +1884,11 @@ window.algorithm = {
   },
   init(Vue) {
     this.initData()
+    // setInterval(() => {
+    //   window.algorithm.timeDuration += 1000 * 60
+    //   this.assignpProjects()
+    // }, 1000 * 60)
+
     // setInterval(() => {
     //   window.algorithm.timeDuration += 1000 * 60
     //   this.assignpProjects()
