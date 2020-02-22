@@ -73,7 +73,9 @@ export default {
       this.rateConfig = await this.$IDB.getAll('rateConfig')
     },
     openScreen() {
-      window.ipcRenderer.send('notice-fee-screen', { checkoutProjectList: this.data })
+      window.ipcRenderer.send('notice-fee-screen', {
+        checkoutProjectList: this.data
+      })
     },
     receiveFee(event, tipList) {
       this.tipList = tipList
@@ -117,7 +119,9 @@ export default {
         // 保存到data.orderObj
         this.orderInfo.forEach(e => {
           // tip,checkout
-          const orderInfoItem = this.$algorithm.data.orderObj[e.id].orderInfo.find(x => x.assignItemID == e.assignItemID)
+          const orderInfoItem = this.$algorithm.data.orderObj[
+            e.id
+          ].orderInfo.find(x => x.assignItemID == e.assignItemID)
           // 计算价格
           // let price = orderInfoItem.project.price || 0
           // orderInfoItem.additions.forEach((a) => {
@@ -138,7 +142,9 @@ export default {
             scoreCoefficient = rateItem.scoreCoefficient || 0
           }
           // 计算技师得分
-          let score = Math.round(e.accountAndCommission.accountTotal * scoreCoefficient)
+          let score = Math.round(
+            e.accountAndCommission.accountTotal * scoreCoefficient
+          )
           // 保存技师得分，方便之后存入数据库
           if (score > 0) {
             let techScore = techScoreMap.get(e.technicianID) || 0
@@ -146,7 +152,9 @@ export default {
             techScoreMap.set(e.technicianID, techScore)
           }
           e.score = score
-          e.bottomTip = Math.round(e.accountAndCommission.accountTotal * bottomTipProportion / 100)
+          e.bottomTip = Math.round(
+            (e.accountAndCommission.accountTotal * bottomTipProportion) / 100
+          )
           // 计算小费补贴
           if (e.bottomTip > e.tip) {
             e.subsidy = e.bottomTip - e.tip
@@ -161,9 +169,20 @@ export default {
             tip: e.tip,
             rate: e.rate,
             projectAccount: e.accountAndCommission.accountTotal,
-            totalAccount: this.$fixNum(e.accountAndCommission.accountTotal + e.tip)
+            commissionAccount: e.accountAndCommission.commissionAccountTotal,
+            totalAccount: this.$fixNum(
+              e.accountAndCommission.accountTotal + e.tip
+            )
           }
           this.$set(orderInfoItem, 'checkoutInfo', checkoutInfo)
+
+          // 保存到assignList中
+          let assignItem = this.$algorithm.data.assignList.find(
+            x => x.id == orderInfoItem.assignItemID
+          )
+          if (assignItem) {
+            this.$set(assignItem, 'checkoutInfo', checkoutInfo)
+          }
         })
         // 保存结账数据
         let checkout = {
@@ -192,9 +211,7 @@ export default {
         })
       }
     },
-    setTechRate(score, technicianID) {
-
-    },
+    setTechRate(score, technicianID) {},
     async updateTechRate(techScoreMap) {
       techScoreMap.forEach(async (value, key) => {
         let tech = await this.$IDB.get('technician', key)
@@ -205,10 +222,10 @@ export default {
       })
     },
     async setorderTip(orderID, tipObj) {
-      await this.$IDB.executeTransaction(['order'], 'readwrite', (t) => {
+      await this.$IDB.executeTransaction(['order'], 'readwrite', t => {
         const store = t.objectStore('order')
         const request = store.get(orderID)
-        request.onsuccess = (event) => {
+        request.onsuccess = event => {
           const order = event.target.result
           order.tipObj = order.tipObj || {}
           for (let i in tipObj) {
@@ -224,11 +241,16 @@ export default {
   },
   computed: {
     payTotal() {
-      return this.cashAmount + this.giftCardAmount + this.creditCardAmount + this.couponAmount
+      return (
+        this.cashAmount +
+        this.giftCardAmount +
+        this.creditCardAmount +
+        this.couponAmount
+      )
     },
     commissionAccountTotal() {
       let total = 0
-      this.orderInfo.forEach((item) => {
+      this.orderInfo.forEach(item => {
         let price = item.accountAndCommission.commissionAccountTotal || 0
         total += price
       })
@@ -237,7 +259,7 @@ export default {
     total() {
       // debugger
       let total = 0
-      this.orderInfo.forEach((item) => {
+      this.orderInfo.forEach(item => {
         let price = item.accountAndCommission.accountTotal || 0
         price += item.tip || 0
         total += price
@@ -246,7 +268,7 @@ export default {
     },
     tips() {
       let total = 0
-      this.orderInfo.forEach((item) => {
+      this.orderInfo.forEach(item => {
         total += item.tip || 0
       })
       return total

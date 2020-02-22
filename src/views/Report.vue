@@ -183,6 +183,9 @@ export default {
         // this.tips +=item.tips
         // this.projectPrices +=item.projectPrices
         item.orderInfo.forEach(projectInfo => {
+          if (projectInfo.name == 'madison') {
+            console.log(item)
+          }
           // 合计小费补贴
           this.subsidyTotal += projectInfo.subsidy || 0
           // 生成顾客信息
