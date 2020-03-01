@@ -15,6 +15,7 @@ window.algorithm = {
     // jumpTechList: [], // 跳过技师的列表，记录本可以做这个项目但是因为要做别的项目而错过的技师，每次往已分配里加项目的时候保存
     // assignedTechList: [], // 技师被分配的时候添加，有可能技师是本可以做别的项目，要记录，不然没法算等待时间
     // tempJumpTechList: [], // 每次排队的时候记录技师等待列表，结合assignedTechList可以得知每个项目跳过的技师
+    lockedPosition: [],
     customTimeCountObj: {},
     orderObj: {},
     positionObj: { maxIndex: 0 },
@@ -460,6 +461,10 @@ window.algorithm = {
     const waitingProjectList = order.orderInfo
       .filter(x => x.assignItemID == null)
       .sort((x, y) => x.kind.priority - y.kind.priority)
+
+    if (waitingProjectList.length <= 0) {
+      return
+    }
 
     waitingProjectList.forEach((projectItem, i) => {
       projectItem.projectPriorityTime = i * priorityTime

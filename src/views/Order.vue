@@ -108,7 +108,7 @@ export default {
           if (tabID == 1) {
             checkoutUsers.push(row.name)
           } else {
-            const other = row.otherFormDatas.find((x) => x.tabID == tabID)
+            const other = row.otherFormDatas.find(x => x.tabID == tabID)
             if (other) {
               checkoutUsers.push(other.name)
             }
@@ -131,9 +131,9 @@ export default {
     accountFormatter(row, column, cell) {
       if (cell) {
         let total = 0
-        cell.forEach((item) => {
+        cell.forEach(item => {
           let price = item.project.price || 0
-          item.additions.forEach((a) => {
+          item.additions.forEach(a => {
             let p = a.price || 0
             price += p
           })
@@ -166,18 +166,26 @@ export default {
     }
   },
   watch: {
-
+    rType() {
+      this.multipleSelection = []
+    }
   },
   computed: {
     waitingCheckList() {
-      return Object.values(this.data.orderObj).filter(order => order.orderInfo.length > 0 &&
-        order.orderInfo.every(e => e.status == 'end') &&
-        !order.orderInfo.every(e => e.checkoutInfo))
+      return Object.values(this.data.orderObj).filter(
+        order =>
+          order.orderInfo.length > 0 &&
+          order.orderInfo.every(e => e.status == 'end') &&
+          !order.orderInfo.every(e => e.checkoutInfo)
+      )
     },
     completedCheckList() {
-      return Object.values(this.data.orderObj).filter(order => order.orderInfo.length > 0 &&
-        order.orderInfo.every(e => e.status == 'end') &&
-        order.orderInfo.every(e => e.checkoutInfo))
+      return Object.values(this.data.orderObj).filter(
+        order =>
+          order.orderInfo.length > 0 &&
+          order.orderInfo.every(e => e.status == 'end') &&
+          order.orderInfo.every(e => e.checkoutInfo)
+      )
     },
     checkoutProjectList() {
       const list = []

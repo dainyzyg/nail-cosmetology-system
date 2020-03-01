@@ -57,6 +57,8 @@
         .schedule-order-content
           .schedule-line(v-for="i in timeList")
             .schedule-line-order(v-for="j in getOrderCount(i)" @click="selectOrder(i.time+'-'+j)")
+              //- .lock
+              //-   //- i.el-icon-remove
               .change-modal(v-if="showChange")
                 i.el-icon-circle-check-outline(v-if="(!positionObj[i.time+'-'+j]||positionObj[i.time+'-'+j].number==1)&&changeList.length<2&&!changeList.includes(i.time+'-'+j)")
                 i.el-icon-circle-check(v-if="changeList.includes(i.time+'-'+j)")
@@ -77,7 +79,8 @@
                 //- .schedule-btn-line
                 //-   .name {{positionObj[i.time+'-'+j].projects}}
               .empty-schedule(v-if="!positionObj[i.time+'-'+j]" )
-                i.el-icon-circle-plus
+                i.el-icon-remove(v-if="lockedPosition.includes(i.time+'-'+j)")
+                i.el-icon-circle-plus(v-else)
             .schedule-line-order(v-for="j in getOverFlowOrder(i)" @click="selectOrder(j.position)")
               .change-modal(v-if="showChange")
                 i.el-icon-circle-check-outline(v-if="(!positionObj[j.position]||positionObj[j.position].number==1)&&changeList.length<2&&!changeList.includes(i.time+'-'+j)")
@@ -407,6 +410,18 @@ export default {
     orderSave(temp) {
       let oldPositions = []
       if (this.selectedOrder.id) {
+        // 如果订单所有项目未分配并且已分配的项目都已经完成，订单状态就是空闲 isfree = true，其他状态就是不空闲
+        if (
+          this.selectedOrder.orderInfo.some(x => !x.assignItemID) &&
+          this.selectedOrder.orderInfo.every(
+            x => !x.assignItemID || x.status == 'end'
+          )
+        ) {
+          this.selectedOrder.isfree = true
+        } else {
+          this.selectedOrder.isfree = false
+        }
+
         oldPositions = [...this.selectedOrder.timePositions]
         this.clearOrder()
       } else {
@@ -503,11 +518,21 @@ export default {
       // this.assign()
     },
     deleteOrder() {
-      const oldPositions = [...this.selectedOrder.timePositions]
-      this.selectedOrder.timePositions.forEach(x => {
+      let order = this.$algorithm.data.orderObj[this.selectedOrder.id]
+
+      if (!order) {
+        throw new Error('所选订单不存在!')
+      }
+      // 已分配的项目不能删除
+      if (order.orderInfo.some(x => x.assignItemID)) {
+        throw new Error('该订单存在已分配的项目，无法删除！')
+      }
+
+      const oldPositions = [...order.timePositions]
+      order.timePositions.forEach(x => {
         delete this.positionObj[x.position]
       })
-      this.$delete(this.orderObj, this.selectedOrder.id)
+      this.$delete(this.orderObj, order.id)
       // 响应式delete this.orderObj[this.selectedOrder.id]
       this.selectedOrder = { orderInfo: [], isArrive: 'notArrive' }
       this.judgeMove(oldPositions)
@@ -628,7 +653,7 @@ export default {
         .map(x => this.positionObj[x])
       if (moveList.length > 0) {
         let positionItem = moveList[0]
-        this.selectedOrder = this.orderObj[positionItem.orderID]
+        this.selectedOrder = this.$clone(this.orderObj[positionItem.orderID])
         this.title = this.orderObj[
           positionItem.orderID
         ].timePositions[0].position
@@ -702,17 +727,32 @@ export default {
         this.changeList.push(id)
       }
     },
-    selectOrder(id) {
+    async selectOrder(id) {
       if (this.showChange) {
         return this.clickChange(id)
       }
+
       this.title = id
       if (
         this.positionObj[this.title] &&
         this.orderObj[this.positionObj[this.title].orderID]
       ) {
-        this.selectedOrder = this.orderObj[this.positionObj[this.title].orderID]
+        this.selectedOrder = this.$clone(
+          this.orderObj[this.positionObj[this.title].orderID]
+        )
       } else {
+        if (this.lockedPosition.includes(id)) {
+          await this.$confirm('该空格已被锁定, 是否解锁?', '提示', {
+            confirmButtonText: '确定',
+            cancelButtonText: '取消',
+            type: 'warning'
+          })
+          this.data.lockedPosition = this.lockedPosition.filter(x => x != id)
+          window.algDataChange.scheduleDataChange()
+          return
+        }
+        this.lockedPosition.push(id)
+        window.algDataChange.scheduleDataChange()
         this.selectedOrder = { orderInfo: [], isArrive: 'notArrive' }
       }
 
@@ -728,6 +768,11 @@ export default {
         r.count = x.order.orderInfo.length
         r.number = x.order.orderInfo.filter(f => f.assignItemID).length + 1
         r.orderName = x.order.name
+
+        let timePositionItem = x.order.timePositions[r.number - 1]
+        if (!timePositionItem) {
+          return r
+        }
         let index = x.order.timePositions[r.number - 1].index
         let position = x.order.timePositions[r.number - 1].time
           .toLocaleTimeString('en')
@@ -735,6 +780,10 @@ export default {
         r.position = `${position}-${index}`
         return r
       })
+    },
+
+    lockedPosition() {
+      return this.data.lockedPosition
     },
     orderObj() {
       return this.data.orderObj
@@ -752,7 +801,17 @@ export default {
       return this.data.assignList
     }
   },
-  watch: {}
+  watch: {
+    orderVisible(val) {
+      if (!val) {
+        // console.log(this.title)
+        this.data.lockedPosition = this.lockedPosition.filter(
+          x => x != this.title
+        )
+        window.algDataChange.scheduleDataChange()
+      }
+    }
+  }
 }
 </script>
 <style scoped>
@@ -899,6 +958,20 @@ export default {
   /* border-bottom: 2px solid #ebeef5; */
   color: #409eff;
   height: 80px;
+}
+.lock {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  opacity: 0.5;
+}
+.lock i {
+  font-size: 45px;
 }
 .change-modal {
   /* z-index: 10; */

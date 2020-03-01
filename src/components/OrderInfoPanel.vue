@@ -6,7 +6,7 @@
         .project-kind-wrapper.flex-c
           .kind {{item.kind.name}}
           .project {{item.project.name}}
-          .close(@click="removeItem(index)")
+          .close(@click="removeItem(index,item)")
             i.el-icon-close(style="font-size:18px")
         .addition-wrapper
           .technician(v-for="i in item.technicians") {{i.name}}
@@ -31,8 +31,17 @@ export default {
     return {}
   },
   methods: {
-    removeItem(index) {
-      this.data.splice(index, 1)
+    removeItem(index, item) {
+      console.log(item)
+      if (item.assignItemID) {
+        // throw new Error('已分配的项目无法删除！')
+        this.$alert('已分配的项目无法删除！', '错误提示', {
+          confirmButtonText: '确定',
+          type: 'error'
+        })
+      } else {
+        this.data.splice(index, 1)
+      }
     }
   },
   computed: {},
