@@ -66,7 +66,8 @@ window.algorithm = {
     return new Date(this.getDateNow().toDateString())
   },
   getDateEnd() {
-    return new Date(this.getDateStart().getTime() + 24 * 60 * 60 * 1000 - 1)
+    // return new Date(this.getDateStart().getTime() + 24 * 60 * 60 * 1000 - 1)
+    return new Date(this.getDateStart().setHours(24) - 1)
   },
   print(data) {
     const BrowserWindow = require('electron').remote.BrowserWindow
@@ -116,7 +117,8 @@ window.algorithm = {
     } else {
       time = parseInt(localStorage.weekendBeginTime)
     }
-    return new Date(this.getDateStart().getTime() + time * 60 * 60 * 1000)
+    // return new Date(this.getDateStart().getTime() + time * 60 * 60 * 1000)
+    return new Date(this.getDateStart().setHours(time))
   },
   workEndTime() {
     const day = this.getDateNow().getDay()
@@ -126,7 +128,8 @@ window.algorithm = {
     } else {
       time = parseInt(localStorage.weekendEndTime)
     }
-    return new Date(this.getDateStart().getTime() + time * 60 * 60 * 1000)
+    // return new Date(this.getDateStart().getTime() + time * 60 * 60 * 1000)
+    return new Date(this.getDateStart().setHours(time))
   },
   async getAttendanceInfo() {
     const attendanceInfo = {}
@@ -569,9 +572,10 @@ window.algorithm = {
       } else {
         time = parseInt(localStorage.weekendEndTime)
       }
-      return new Date(
-        new Date(date.toDateString()).getTime() + time * 60 * 60 * 1000
-      )
+      // return new Date(
+      //   new Date(date.toDateString()).getTime() + time * 60 * 60 * 1000
+      // )
+      return this.setTimeHoursAndMinutes(date, time)
     }
     let workEndTime = getWorkEndTime(date)
     // 根据 assignList和jumpTechMap计算技师等待时间
@@ -1833,9 +1837,7 @@ window.algorithm = {
   async initData() {
     // refresh Date
     let nextDateMS =
-      new Date(new Date().toDateString()).getTime() +
-      24 * 60 * 60 * 1000 -
-      new Date().getTime()
+      new Date(new Date().toDateString()).setHours(24) - new Date().getTime()
     setTimeout(async () => {
       await this.initData()
       window.algDataChange.scheduleDataChange()
@@ -1859,9 +1861,22 @@ window.algorithm = {
   getTimeByStr(timeStr) {
     const hour = parseInt(timeStr.split(':')[0])
     const minute = parseInt(timeStr.split(':')[1])
-    return new Date(
-      this.getDateStart().getTime() + (hour * 60 + minute) * 60 * 1000
-    )
+    // return new Date(
+    //   this.getDateStart().getTime() + (hour * 60 + minute) * 60 * 1000
+    // )
+    return this.setTimeHoursAndMinutes(this.getDateStart(), hour, minute)
+  },
+  setTimeHoursAndMinutes(time, hours = 0, minutes = 0) {
+    if (!(time instanceof Date)) {
+      time = new Date(time)
+      if (time == 'Invalid Date') {
+        throw new Error('setTimeHours 时间参数格式不正确！')
+      }
+    }
+    time = new Date(time.toDateString())
+    let date = new Date(time.setHours(hours))
+    date = new Date(date.setMinutes(minutes))
+    return date
   },
   getTimeStr(time) {
     if (time instanceof Date) {
