@@ -12,7 +12,8 @@
         tr
           th 技师姓名
           th 技师星级
-          th 技师小费$
+          th 小费总数$
+          th 等待费用$
           th 单价总数$
           th 技师提成$
           th 利润$
@@ -20,15 +21,16 @@
         tr(v-for="i in techList")
           td.align-center {{i.name}}
           td.align-right {{(i.rates/i.count).toFixed(2)}}
-          td.align-right {{i.tips}}
+          td.align-right {{(i.tips||0)+(i.subsidys||0)}}
+          td.align-right {{i.waitingPriceTotal||0}}
           td.align-right {{i.projectPrices}}
           td.align-right {{fixed2(i.commissionTotal)}}
           td.align-right {{fixed2(i.projectPrices-correctNum(i.commissionTotal))}}
       tfoot
         tr
-          th(colspan="6" style="text-align:right") 营业总数:${{aggregatedData.projectPrices}} 提成总数:${{commissionAccountTotal}} 小费补贴:${{aggregatedData.subsidyTotal}} 等待费用:${{aggregatedData.waitingPriceTotal}} 利润总数:${{profits}}
-        tr 
-          th(colspan="6" style="text-align:right") 实收总数:${{aggregatedData.paytotals}} 其中现金:${{aggregatedData.cashAmount}} 礼卡:${{aggregatedData.giftCardAmount}} 信用卡:${{aggregatedData.creditCardAmount}} 优惠券:${{aggregatedData.couponAmount}} 现金盈亏:${{cashProfits}}
+          th(colspan="7" style="text-align:right") 营业总数:${{aggregatedData.projectPrices}} 提成总数:${{commissionAccountTotal}} 小费补贴:${{aggregatedData.subsidyTotal}} 等待费用:${{aggregatedData.waitingPriceTotal}} 利润总数:${{profits}}
+        tr
+          th(colspan="7" style="text-align:right") 实收总数:${{aggregatedData.paytotals}} 其中现金:${{aggregatedData.cashAmount}} 礼卡:${{aggregatedData.giftCardAmount}} 信用卡:${{aggregatedData.creditCardAmount}} 优惠券:${{aggregatedData.couponAmount}} 现金盈亏:${{cashProfits}}
     table( v-if="reportType=='techReport'" v-for="i in techList" cellspacing="0" cellpadding="0" style="width:100%;page-break-after: always;")
       caption 技师报单
       tfoot
@@ -69,7 +71,7 @@
       thead(style="display:table-header-group;")
         tr
           th 顾客姓名
-          th 电话 
+          th 电话
           th 项目
           th 小费$
           th 项目费用$
@@ -153,13 +155,13 @@ export default {
       return num.toFixed(2)
     },
     setType(event, type) {
-      this.reportType = type;
+      this.reportType = type
     },
     getQueryString(name) {
-      var reg = new RegExp("(^|&)" + name + "=([^&]*)(&|$)", "i");
-      var r = window.location.search.substr(1).match(reg);
-      if (r != null) return unescape(r[2]);
-      return null;
+      var reg = new RegExp('(^|&)' + name + '=([^&]*)(&|$)', 'i')
+      var r = window.location.search.substr(1).match(reg)
+      if (r != null) return unescape(r[2])
+      return null
     },
     receiveData(event, orderList, techList, aggregatedData) {
       this.orderList = orderList
@@ -171,7 +173,6 @@ export default {
       window.alert('asdasd')
       const ipcRenderer = window.electron.ipcRenderer
       ipcRenderer.sendToHost('pong')
-
     },
     print() {
       window.print()
@@ -183,11 +184,21 @@ export default {
       return this.correctNum(this.aggregatedData.commissionAccountTotal)
     },
     profits() {
-      return this.correctNum(this.aggregatedData.projectPrices - this.aggregatedData.subsidyTotal - this.aggregatedData.waitingPriceTotal - this.aggregatedData.commissionAccountTotal)
+      return this.correctNum(
+        this.aggregatedData.projectPrices -
+          this.aggregatedData.subsidyTotal -
+          this.aggregatedData.waitingPriceTotal -
+          this.aggregatedData.commissionAccountTotal
+      )
     },
     cashProfits() {
       // alert(`${this.profits} - this.giftCardAmount - this.creditCardAmount - this.couponAmount`)
-      return this.correctNum(this.profits - this.aggregatedData.giftCardAmount - this.aggregatedData.creditCardAmount - this.aggregatedData.couponAmount)
+      return this.correctNum(
+        this.profits -
+          this.aggregatedData.giftCardAmount -
+          this.aggregatedData.creditCardAmount -
+          this.aggregatedData.couponAmount
+      )
     }
   },
   watch: {}

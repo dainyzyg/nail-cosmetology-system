@@ -169,6 +169,8 @@
 //
 //
 //
+//
+//
 
 
 
@@ -231,7 +233,7 @@
       this.reportType = type;
     },
     getQueryString: function getQueryString(name) {
-      var reg = new RegExp("(^|&)" + name + "=([^&]*)(&|$)", "i");
+      var reg = new RegExp('(^|&)' + name + '=([^&]*)(&|$)', 'i');
       var r = window.location.search.substr(1).match(reg);
       if (r != null) return unescape(r[2]);
       return null;
@@ -614,7 +616,10 @@ var render = function() {
                       _vm._v(_vm._s((i.rates / i.count).toFixed(2)))
                     ]),
                     _c("td", { staticClass: "align-right" }, [
-                      _vm._v(_vm._s(i.tips))
+                      _vm._v(_vm._s((i.tips || 0) + (i.subsidys || 0)))
+                    ]),
+                    _c("td", { staticClass: "align-right" }, [
+                      _vm._v(_vm._s(i.waitingPriceTotal || 0))
                     ]),
                     _c("td", { staticClass: "align-right" }, [
                       _vm._v(_vm._s(i.projectPrices))
@@ -640,7 +645,7 @@ var render = function() {
                     "th",
                     {
                       staticStyle: { "text-align": "right" },
-                      attrs: { colspan: "6" }
+                      attrs: { colspan: "7" }
                     },
                     [
                       _vm._v(
@@ -663,7 +668,7 @@ var render = function() {
                     "th",
                     {
                       staticStyle: { "text-align": "right" },
-                      attrs: { colspan: "6" }
+                      attrs: { colspan: "7" }
                     },
                     [
                       _vm._v(
@@ -898,7 +903,8 @@ var staticRenderFns = [
       _c("tr", [
         _c("th", [_vm._v("技师姓名")]),
         _c("th", [_vm._v("技师星级")]),
-        _c("th", [_vm._v("技师小费$")]),
+        _c("th", [_vm._v("小费总数$")]),
+        _c("th", [_vm._v("等待费用$")]),
         _c("th", [_vm._v("单价总数$")]),
         _c("th", [_vm._v("技师提成$")]),
         _c("th", [_vm._v("利润$")])
@@ -936,7 +942,7 @@ var staticRenderFns = [
     return _c("thead", { staticStyle: { display: "table-header-group" } }, [
       _c("tr", [
         _c("th", [_vm._v("顾客姓名")]),
-        _c("th", [_vm._v("电话 ")]),
+        _c("th", [_vm._v("电话")]),
         _c("th", [_vm._v("项目")]),
         _c("th", [_vm._v("小费$")]),
         _c("th", [_vm._v("项目费用$")]),
