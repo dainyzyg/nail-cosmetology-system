@@ -2,6 +2,7 @@
   .page.col(v-if="true")
     .header 下单程序地址：http://{{address}}
     .header 技师端程序地址：http://{{address}}/mobile
+    .header 订单删除地址：http://{{address}}/manage
 </template>
 <script>
 export default {
