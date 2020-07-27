@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>排钟显示</title>
+    <style>
+      * {
+        font-family: 'PingFang SC', 'Microsoft YaHei' !important;
+      }
+
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+      }
+
+      .page {
+        display: flex;
+        flex: 1;
+        align-items: stretch;
+        overflow: hidden;
+        width: 100vw;
+        height: 100vh;
+      }
+
+      .page.col {
+        flex-direction: column;
+      }
+
+      .flex {
+        display: flex;
+        align-items: stretch;
+      }
+
+      .flex-c {
+        display: flex;
+        align-items: stretch;
+        flex-direction: column;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="app"></div>
+  </body>
+</html>
+<script>
+  window.fs = require('fs')
+  window.path = require('path')
+  window.dbDir = path.resolve(
+    process.cwd(),
+    './userData/IndexedDB/atom_atom_0.indexeddb.leveldb'
+  )
+  window.backupDir = window.path.resolve(process.cwd(), './backup')
+</script>
+<script src="vue.js"></script>
+<script src="dist/restore.js"></script>

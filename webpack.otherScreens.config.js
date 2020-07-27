@@ -5,8 +5,10 @@ module.exports = {
     big: './other_screens/src/big.js',
     fee: './other_screens/src/fee.js',
     dev: './other_screens/src/dev.js',
-    print: './other_screens/src/print.js'
+    print: './other_screens/src/print.js',
+    restore: './other_screens/src/restore.js'
   },
+  // target: 'node',
   module: {
     rules: [
       {

@@ -1,5 +1,5 @@
-let environment = 'product' // product dev
-const openDevTools = false
+let environment = 'product' //product dev
+const openDevTools = true
 const electron = require('electron')
 
 if (process.argv.find((x) => x == '--dev')) {
@@ -33,38 +33,42 @@ const globalShortcut = electron.globalShortcut
 const protocol = electron.protocol
 const dialog = electron.dialog
 protocol.registerStandardSchemes(['atom'])
+// protocol.registerSchemesAsPrivileged([
+//   { scheme: 'scheme1', privileges: { standard: true, secure: true } },
+//   { scheme: 'scheme2', privileges: { standard: true, secure: true } }
+// ])
+
 // Module to create native browser window.
 const BrowserWindow = electron.BrowserWindow
 
 const path = require('path')
-// const url = require('url')
+const url = require('url')
 app.setPath('userData', path.join(__dirname, '../../userData'))
 
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
 let mainWindow
 
-const isSecondInstance = app.makeSingleInstance(
-  (commandLine, workingDirectory) => {
-    // Someone tried to run a second instance, we should focus our window.
-    if (mainWindow) {
-      if (mainWindow.isMinimized()) mainWindow.restore()
-      mainWindow.focus()
-    }
-  }
-)
+const gotTheLock = app.requestSingleInstanceLock()
 
-if (isSecondInstance) {
-  app.quit()
+app.on('second-instance', (commandLine, workingDirectory) => {
+  // Someone tried to run a second instance, we should focus our window.
+  if (mainWindow) {
+    if (mainWindow.isMinimized()) mainWindow.restore()
+    mainWindow.focus()
+  }
+})
+
+if (!gotTheLock) {
+  return app.quit()
 }
 
-/* eslint no-unused-vars: 'off' */
 function showMessage(message) {
   const options = {
     type: 'info',
     title: '信息',
     message: message,
-    buttons: ['是', '否']
+    buttons: ['是', '否'],
   }
   dialog.showMessageBox(options, function (index) {})
 }
@@ -77,7 +81,7 @@ function registerProtocol() {
         (request, callback) => {
           const requesturl = request.url.substr(12)
           // showMessage(requesturl)
-          callback({ url: 'http://localhost:8080/' + requesturl })
+          callback({ url: 'http://localhost:7000/' + requesturl })
         },
         (error) => {
           if (error) console.error('Failed to register protocol')
@@ -112,7 +116,14 @@ function createWindow() {
 
   const { width, height } = electron.screen.getPrimaryDisplay().workAreaSize
   // Create the browser window.
-  mainWindow = new BrowserWindow({ width, height, show: false })
+  mainWindow = new BrowserWindow({
+    width,
+    height,
+    show: false,
+    webPreferences: {
+      nodeIntegrationInWorker: true,
+    },
+  })
   mainWindow.maximize()
   mainWindow.loadURL('atom://atom/index.html')
   // and load the index.html of the app.

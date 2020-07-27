@@ -112,6 +112,20 @@ export default {
           //   return
           // }
         }
+
+        // 判断订单是否被结过账
+        let isCheckedout = this.orderInfo.some(e => {
+          // tip,checkout
+          const orderInfoItem = window.algorithm.data.orderObj[
+            e.id
+          ].orderInfo.find(x => x.assignItemID == e.assignItemID)
+          return orderInfoItem && orderInfoItem.checkoutInfo
+        })
+        // 如果结过账就不能重复结账
+        if (isCheckedout) {
+          throw new Error('有结过账的订单，无法重复结账！')
+        }
+
         // 完成校验
         // 记录技师分数
         let techScoreMap = new Map()

@@ -546,7 +546,7 @@ export default {
     },
     async clearScheduleData() {
       const r = await this.$confirm(
-        '此操作将清空所有订单数据, 是否继续?',
+        '此操作将清空今日所有订单数据, 是否继续?',
         '提示',
         {
           confirmButtonText: '确定',
