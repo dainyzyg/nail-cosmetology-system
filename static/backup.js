@@ -2,7 +2,7 @@ const fs = require('fs')
 const path = require('path')
 
 // 备份防抖间隔
-const IntervalTime = 20000
+const IntervalTime = 10000
 // 备份文件夹最大数量
 const maxCount = 100
 
@@ -16,7 +16,6 @@ const debounce = (func, wait) => {
   console.log('create debounce')
   let timer
   return () => {
-    console.log({ timer })
     clearTimeout(timer)
     timer = setTimeout(func, wait)
   }
@@ -115,7 +114,7 @@ const file = {
     }
   },
   debounceBackup: debounce(() => {
-    console.log('------------------------------debounceBackup!')
+    console.log('%c debounceBackup!', 'color:blue')
     // 删除多余的备份
     file.removeRedundantBackup()
     // 备份
@@ -157,12 +156,11 @@ const file = {
   }
 }
 
-// let orginDir = path.resolve(
-//   process.cwd(),
-//   './testdir/atom_atom_0.indexeddb.leveldb'
-// )
-// let targetDir = path.resolve(process.cwd(), './testdir/target')
+// file.watch()
 
-// console.log(orginDir, targetDir)
-// file.CopyDirectory(orginDir, targetDir)
-file.watch()
+self.addEventListener('message', e => {
+  if (e.data == 'scheduleDataChange') {
+    console.log('%c event backup up up up up up', 'color:blue')
+    file.debounceBackup()
+  }
+})

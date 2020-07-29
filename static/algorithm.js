@@ -348,9 +348,11 @@ window.algorithm = {
       ) {
         startTimeStr = techA.attendanceInfo.lunchTimeEnd
       }
+      // 如果技师当天没有接过单就取历史最后完成时间
       if (
-        relativeTimeA instanceof Date &&
-        relativeTimeA.getTime() == this.getTimeByStr(startTimeStr).getTime()
+        // relativeTimeA instanceof Date &&
+        // relativeTimeA.getTime() == this.getTimeByStr(startTimeStr).getTime()
+        !this.data.assignList.find(x => x.techID == techA.id)
       ) {
         relativeTimeA = techA.lastEndClock.relativeTime
       }
@@ -365,9 +367,11 @@ window.algorithm = {
       ) {
         startTimeStr = techB.attendanceInfo.lunchTimeEnd
       }
+      // 如果技师当天没有接过单就取历史最后完成时间
       if (
-        relativeTimeB instanceof Date &&
-        relativeTimeB.getTime() == this.getTimeByStr(startTimeStr).getTime()
+        // relativeTimeB instanceof Date &&
+        // relativeTimeB.getTime() == this.getTimeByStr(startTimeStr).getTime()
+        !this.data.assignList.find(x => x.techID == techB.id)
       ) {
         relativeTimeB = techB.lastEndClock.relativeTime
       }
@@ -410,8 +414,8 @@ window.algorithm = {
       this.data.preAssignList = []
     }
   },
-  saveScheduleData() {
-    window.IDB.put('schedule', {
+  async saveScheduleData() {
+    await window.IDB.put('schedule', {
       orderObj: this.data.orderObj,
       positionObj: this.data.positionObj,
       assignList: this.data.assignList,
@@ -1841,6 +1845,32 @@ window.algorithm = {
     })
 
     return tech
+  },
+  // 检查orderObj（订单）中项目的状态和assignList（已分配）中的状态是否一致
+  checkOrderState() {
+    let exceptionList = []
+    this.data.assignList.forEach(assignItem => {
+      const order = this.data.orderObj[assignItem.orderID]
+      if (!order) {
+        console.log('订单不存在！', { assignItem })
+        return
+      }
+      const orderItem = order.orderInfo.find(
+        x => x.project.id == assignItem.projectID
+      )
+      if (!orderItem) {
+        console.log('订单中的项目不存在！', { assignItem, order })
+        return
+      }
+      if (orderItem.status != assignItem.status) {
+        exceptionList.push({ assignItem, order })
+        console.log('订单中的项目与已分配中的状态不一致！', {
+          assignItem,
+          order
+        })
+      }
+    })
+    return exceptionList
   },
   async initData() {
     // refresh Date

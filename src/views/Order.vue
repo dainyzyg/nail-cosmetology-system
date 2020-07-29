@@ -4,7 +4,9 @@
     el-radio-group(v-model='rType' size="medium")
       el-radio-button(label="waiting") 待结账
       el-radio-button(label="completed") 已结账
-    el-button(@click="check" icon="el-icon-tickets" size="medium" type="primary") 结账
+    div
+      el-button(@click="syncOrderState" icon="el-icon-document" size="medium" type="primary" plain) 同步订单状态
+      el-button(@click="check" icon="el-icon-tickets" size="medium" type="primary") 结账
   .table-wraper
     template(v-if="rType=='waiting'")
       el-table.table(key="waiting" @selection-change="handleSelectionChange" ref="table1" :data="waitingCheckList" border height="calc(100vh - 66px)")
@@ -74,6 +76,41 @@ export default {
     //   this.waitingCheckList = waitingCheckList
     //   this.completedCheckList = completedCheckList
     // },
+    async syncOrderState() {
+      let exceptionList = this.$algorithm.checkOrderState()
+      if (exceptionList.length <= 0) {
+        this.$message({
+          showClose: true,
+          message: '不存在状态不同步的订单！',
+          type: 'success '
+        })
+        return
+      }
+      let orderStr = exceptionList.map(m => m.order.name).join(',')
+      await this.$confirm(
+        `此操作将同步订单状态，检测出状态不同步的订单：${orderStr}`,
+        '提示',
+        {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning'
+        }
+      )
+      // 同步订单状态
+      exceptionList.forEach(({ order, assignItem }) => {
+        const orderItem = order.orderInfo.find(
+          x => x.project.id == assignItem.projectID
+        )
+        orderItem.status = assignItem.status
+      })
+
+      this.$message({
+        showClose: true,
+        message: '同步完成!',
+        type: 'success '
+      })
+      this.$algorithm.saveScheduleData()
+    },
     chectout() {
       console.log('chectout')
     },
@@ -172,6 +209,7 @@ export default {
   },
   computed: {
     waitingCheckList() {
+      console.log('waitingCheckList')
       return Object.values(this.data.orderObj).filter(
         order =>
           order.orderInfo.length > 0 &&
