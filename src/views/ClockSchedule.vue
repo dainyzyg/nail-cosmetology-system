@@ -19,9 +19,11 @@
     .panel.assign_list
       .panel-title
         | 已分配
+        span.sort-type {{sortTtype }}
         i.el-icon-circle-plus-outline.add-assign-item(@click="assignVisible=true")
+        i.el-icon-sort.sort-assign-item(@click="changeSortType")
       .panet-content
-        AssignItemPopover(@modifyAssign="openModifyAssignModal"   assign v-for="i,index in data.assignList" :key="i.id" :assignItem="i" :index="index")
+        AssignItemPopover(@modifyAssign="openModifyAssignModal"   assign v-for="i,index in assignList" :key="i.id" :assignItem="i" :index="index")
     .panel.clock-schedule
       .panel-title
         | 排钟表
@@ -119,6 +121,7 @@ export default {
   },
   data() {
     return {
+      sortTtype: '按时间',
       modifyAssignItem: null,
       isRealtime: localStorage.realtime == 'true',
       realtime: new Date().toLocaleTimeString('en'),
@@ -150,6 +153,13 @@ export default {
     clearInterval(this.interval)
   },
   methods: {
+    changeSortType() {
+      if (this.sortTtype == '按时间') {
+        this.sortTtype = '按分配'
+      } else {
+        this.sortTtype = '按时间'
+      }
+    },
     getOrderInfo(orderItem) {
       if (!orderItem) {
         return []
@@ -798,6 +808,11 @@ export default {
       return this.data.technicianList
     },
     assignList() {
+      if (this.sortTtype == '按时间') {
+        return this.data.assignList
+          .slice(0)
+          .sort((a, b) => b.timeEnd.getTime() - a.timeEnd.getTime())
+      }
       return this.data.assignList
     }
   },
@@ -860,6 +875,18 @@ export default {
   position: absolute;
   left: 4px;
   font-size: 26px;
+  font-weight: bolder;
+  cursor: pointer;
+}
+.sort-type {
+  font-size: 16px;
+  padding-left: 4px;
+  color: #409eff;
+}
+.sort-assign-item {
+  position: absolute;
+  right: 4px;
+  font-size: 20px;
   font-weight: bolder;
   cursor: pointer;
 }

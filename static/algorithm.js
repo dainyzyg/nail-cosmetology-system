@@ -340,6 +340,18 @@ window.algorithm = {
       return diff
     }
 
+    // 如果最后完成时间一样就按照已分配列表里的先后顺序来排
+    let indexA = this.data.assignList.findIndex(
+      assignItem => assignItem.techID == techA.id
+    )
+    let indexB = this.data.assignList.findIndex(
+      assignItem => assignItem.techID == techB.id
+    )
+    // 两个技师都分配过项目就按之前分配的顺序来
+    if (indexA >= 0 && indexB >= 0) {
+      return indexB - indexA
+    }
+
     if (techA.lastEndClock) {
       let startTimeStr = techA.attendanceInfo.startTime
       if (
@@ -427,9 +439,10 @@ window.algorithm = {
     window.algDataChange.scheduleDataChange()
   },
   assign() {
-    this.data.assignList.sort(
-      (a, b) => b.timeEnd.getTime() - a.timeEnd.getTime()
-    )
+    // 不重新排序，保留原始顺序
+    // this.data.assignList.sort(
+    //   (a, b) => b.timeEnd.getTime() - a.timeEnd.getTime()
+    // )
 
     this.batchComputingTechLastClock()
     console.time('assign')
@@ -1714,7 +1727,12 @@ window.algorithm = {
 
     window.algDataChange.assignItemChange()
   },
-  cancelAssignItem(assignItem, index) {
+  cancelAssignItem(assignItem) {
+    let index = this.data.assignList.findIndex(x => x.id == assignItem.id)
+    if (index < 0) {
+      throw new Error('项目已过期!')
+    }
+    assignItem = this.data.assignList[index]
     try {
       this.data.assignList.splice(index, 1)
       const order = this.data.orderObj[assignItem.orderID]
@@ -1764,7 +1782,12 @@ window.algorithm = {
 
     window.algDataChange.assignListChange()
   },
-  unshiftToAssignList(assignItem, status, index) {
+  unshiftToAssignList(assignItem, status) {
+    let index = this.data.preAssignList.findIndex(x => x.id == assignItem.id)
+    if (index < 0) {
+      throw new Error('项目已过期!')
+    }
+    assignItem = this.data.preAssignList[index]
     if (status == 'start') {
       if (
         this.data.assignList.find(
