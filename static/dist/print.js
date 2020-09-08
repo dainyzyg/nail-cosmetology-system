@@ -696,7 +696,13 @@ var render = function() {
                       _vm._v(_vm._s(i.name))
                     ]),
                     _c("td", { staticClass: "align-right" }, [
-                      _vm._v(_vm._s((i.rates / i.count).toFixed(2)))
+                      _vm._v(
+                        _vm._s(
+                          isNaN(i.rates / i.count)
+                            ? ""
+                            : (i.rates / i.count).toFixed(2)
+                        )
+                      )
                     ]),
                     _c("td", { staticClass: "align-right" }, [
                       _vm._v(_vm._s((i.tips || 0) + (i.subsidys || 0)))
@@ -985,7 +991,7 @@ var staticRenderFns = [
     return _c("thead", { staticStyle: { display: "table-header-group" } }, [
       _c("tr", [
         _c("th", [_vm._v("技师姓名")]),
-        _c("th", [_vm._v("技师星级")]),
+        _c("th", [_vm._v("技师星级1")]),
         _c("th", [_vm._v("小费总数$")]),
         _c("th", [_vm._v("等待费用$")]),
         _c("th", [_vm._v("单价总数$")]),

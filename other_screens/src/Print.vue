@@ -11,7 +11,7 @@
       thead(style="display:table-header-group;")
         tr
           th 技师姓名
-          th 技师星级
+          th 技师星级1
           th 小费总数$
           th 等待费用$
           th 单价总数$
@@ -20,7 +20,7 @@
       tbody
         tr(v-for="i in techList")
           td.align-center {{i.name}}
-          td.align-right {{(i.rates/i.count).toFixed(2)}}
+          td.align-right {{isNaN(i.rates/i.count)?'':(i.rates/i.count).toFixed(2)}}
           td.align-right {{(i.tips||0)+(i.subsidys||0)}}
           td.align-right {{i.waitingPriceTotal||0}}
           td.align-right {{i.projectPrices}}

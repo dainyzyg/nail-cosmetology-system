@@ -88,7 +88,7 @@ export default {
   },
   methods: {
     async dateChange() {
-      console.log(this.date)
+      // console.log(this.date)
       this.dateBegin = this.date
       this.dataEnd = this.date
       await this.getData()
@@ -164,7 +164,7 @@ export default {
       this.clearReport()
       let query = IDBKeyRange.bound(this.dateBegin, this.dataEnd)
       let data = await this.$IDB.getAllByIndex('checkoutList', 'date', query)
-      let techData = await this.$IDB.getAll('technician')
+      let techData = await this.$IDB.getAllByIndex('technician', 'index')
       // let scheduleData = await this.$IDB.getAll('schedule', query)
       let orderMap = new Map()
       let techMap = new Map()
@@ -184,14 +184,14 @@ export default {
         // this.projectPrices +=item.projectPrices
         item.orderInfo.forEach(projectInfo => {
           if (projectInfo.name == 'madison') {
-            console.log(item)
+            // console.log(item)
           }
           // 合计小费补贴
           this.subsidyTotal += projectInfo.subsidy || 0
           // 生成顾客信息
           if (orderMap.has(projectInfo.id)) {
             let orderItem = orderMap.get(projectInfo.id)
-            console.log(orderItem)
+            // console.log(orderItem)
             orderItem.orderInfo.push({
               kind: projectInfo.kind,
               project: projectInfo.project,
@@ -301,13 +301,41 @@ export default {
       await this.computingTechWaitingTime(techMap)
       console.timeEnd('a')
       this.orderList = [...orderMap.values()]
-      this.techList = [...techMap.values()]
+
+      //  combo techList, include all tech
+      // this.techList = [...techMap.values()]
+      this.techList = techData.map(tech => {
+        let techMapItem = techMap.get(tech.id)
+        if (techMapItem) {
+          return techMapItem
+        }
+        let defaultItem = {
+          commissionTotal: 0,
+          count: 0,
+          id: tech.id,
+          name: tech.name,
+          payTotals: 0,
+          projectList: [],
+          projectPrices: 0,
+          rates: 0,
+          scoreObj: {
+            targetScore: tech.targetScore,
+            targetLevel: tech.targetLevel,
+            score: tech.score || 0
+          },
+          subsidys: 0,
+          tips: 0,
+          waitingPriceTotal: 0,
+          waitingTimeList: []
+        }
+        return defaultItem
+      })
       // debugger
-      console.log(this.techList)
+      // console.log(this.techList)
     },
     setFirstSendObj(attr) {
       this.firstSendObj[attr] = true
-      console.log('firstSendObj', JSON.stringify(this.firstSendObj))
+      // console.log('firstSendObj', JSON.stringify(this.firstSendObj))
       if (this.firstSendObj.domReady && this.firstSendObj.getData) {
         console.log('firstSendObj ready')
         this.$refs.printWebview.send('type-change', this.rType)
