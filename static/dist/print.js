@@ -171,6 +171,56 @@
 //
 //
 //
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
 
 
 
@@ -705,7 +755,7 @@ var render = function() {
                       )
                     ]),
                     _c("td", { staticClass: "align-right" }, [
-                      _vm._v(_vm._s((i.tips || 0) + (i.subsidys || 0)))
+                      _vm._v(_vm._s(i.tips) + "+" + _vm._s(i.subsidys))
                     ]),
                     _c("td", { staticClass: "align-right" }, [
                       _vm._v(_vm._s(i.waitingPriceTotal || 0))
@@ -730,52 +780,68 @@ var render = function() {
               ),
               _c("tfoot", [
                 _c("tr", [
-                  _c(
-                    "th",
-                    {
-                      staticStyle: { "text-align": "right" },
-                      attrs: { colspan: "7" }
-                    },
-                    [
-                      _vm._v(
-                        "营业总数:$" +
-                          _vm._s(_vm.aggregatedData.projectPrices) +
-                          " 提成总数:$" +
-                          _vm._s(_vm.commissionAccountTotal) +
-                          " 小费补贴:$" +
-                          _vm._s(_vm.aggregatedData.subsidyTotal) +
-                          " 等待费用:$" +
-                          _vm._s(_vm.aggregatedData.waitingPriceTotal) +
-                          " 利润总数:$" +
-                          _vm._s(_vm.profits)
-                      )
-                    ]
-                  )
+                  _c("th", [
+                    _vm._v("营业总数"),
+                    _c("br"),
+                    _vm._v("$" + _vm._s(_vm.aggregatedData.projectPrices))
+                  ]),
+                  _c("th", [
+                    _vm._v("提成总数"),
+                    _c("br"),
+                    _vm._v(
+                      "$" + _vm._s(_vm.aggregatedData.commissionAccountTotal)
+                    )
+                  ]),
+                  _c("th", [
+                    _vm._v("小费补贴"),
+                    _c("br"),
+                    _vm._v("$" + _vm._s(_vm.aggregatedData.subsidyTotal))
+                  ]),
+                  _c("th", [
+                    _vm._v("等待费用"),
+                    _c("br"),
+                    _vm._v("$" + _vm._s(_vm.aggregatedData.waitingPriceTotal))
+                  ]),
+                  _c("th", [
+                    _vm._v("利润总数"),
+                    _c("br"),
+                    _vm._v("$" + _vm._s(_vm.profits))
+                  ]),
+                  _c("th"),
+                  _c("th")
                 ]),
                 _c("tr", [
-                  _c(
-                    "th",
-                    {
-                      staticStyle: { "text-align": "right" },
-                      attrs: { colspan: "7" }
-                    },
-                    [
-                      _vm._v(
-                        "实收总数:$" +
-                          _vm._s(_vm.aggregatedData.paytotals) +
-                          " 其中现金:$" +
-                          _vm._s(_vm.aggregatedData.cashAmount) +
-                          " 礼卡:$" +
-                          _vm._s(_vm.aggregatedData.giftCardAmount) +
-                          " 信用卡:$" +
-                          _vm._s(_vm.aggregatedData.creditCardAmount) +
-                          " 优惠券:$" +
-                          _vm._s(_vm.aggregatedData.couponAmount) +
-                          " 现金盈亏:$" +
-                          _vm._s(_vm.cashProfits)
-                      )
-                    ]
-                  )
+                  _c("th", [
+                    _vm._v("实收总数"),
+                    _c("br"),
+                    _vm._v("$" + _vm._s(_vm.aggregatedData.paytotals))
+                  ]),
+                  _c("th", [
+                    _vm._v("现金"),
+                    _c("br"),
+                    _vm._v("$" + _vm._s(_vm.aggregatedData.cashAmount))
+                  ]),
+                  _c("th", [
+                    _vm._v("礼卡"),
+                    _c("br"),
+                    _vm._v("$" + _vm._s(_vm.aggregatedData.giftCardAmount))
+                  ]),
+                  _c("th", [
+                    _vm._v("信用卡"),
+                    _c("br"),
+                    _vm._v("$" + _vm._s(_vm.aggregatedData.creditCardAmount))
+                  ]),
+                  _c("th", [
+                    _vm._v("优惠券"),
+                    _c("br"),
+                    _vm._v("$" + _vm._s(_vm.aggregatedData.couponAmount))
+                  ]),
+                  _c("th", [
+                    _vm._v("现金盈亏"),
+                    _c("br"),
+                    _vm._v("$" + _vm._s(_vm.cashProfits))
+                  ]),
+                  _c("th")
                 ])
               ])
             ]

@@ -21,16 +21,66 @@
         tr(v-for="i in techList")
           td.align-center {{i.name}}
           td.align-right {{isNaN(i.rates/i.count)?'':(i.rates/i.count).toFixed(2)}}
-          td.align-right {{(i.tips||0)+(i.subsidys||0)}}
+          //- td.align-right {{(i.tips||0)+(i.subsidys||0)}}
+          td.align-right {{i.tips}}+{{i.subsidys}}
           td.align-right {{i.waitingPriceTotal||0}}
           td.align-right {{i.projectPrices}}
           td.align-right {{fixed2(i.commissionTotal)}}
           td.align-right {{fixed2(i.projectPrices-correctNum(i.commissionTotal))}}
       tfoot
         tr
-          th(colspan="7" style="text-align:right") 营业总数:${{aggregatedData.projectPrices}} 提成总数:${{commissionAccountTotal}} 小费补贴:${{aggregatedData.subsidyTotal}} 等待费用:${{aggregatedData.waitingPriceTotal}} 利润总数:${{profits}}
+          th
+            | 营业总数
+            br
+            | ${{aggregatedData.projectPrices}}
+          th
+            | 提成总数
+            br
+            | ${{aggregatedData.commissionAccountTotal}}
+          th
+            | 小费补贴
+            br
+            | ${{aggregatedData.subsidyTotal}}
+          th
+            | 等待费用
+            br
+            | ${{aggregatedData.waitingPriceTotal}}
+          th
+            | 利润总数
+            br
+            | ${{profits}}
+          th
+          th
         tr
-          th(colspan="7" style="text-align:right") 实收总数:${{aggregatedData.paytotals}} 其中现金:${{aggregatedData.cashAmount}} 礼卡:${{aggregatedData.giftCardAmount}} 信用卡:${{aggregatedData.creditCardAmount}} 优惠券:${{aggregatedData.couponAmount}} 现金盈亏:${{cashProfits}}
+          th
+            | 实收总数
+            br
+            | ${{aggregatedData.paytotals}}
+          th
+            | 现金
+            br
+            | ${{aggregatedData.cashAmount}}
+          th
+            | 礼卡
+            br
+            | ${{aggregatedData.giftCardAmount}}
+          th
+            | 信用卡
+            br
+            | ${{aggregatedData.creditCardAmount}}
+          th
+            | 优惠券
+            br
+            | ${{aggregatedData.couponAmount}}
+          th
+            | 现金盈亏
+            br
+            | ${{cashProfits}}
+          th
+        //- tr
+        //-   th(colspan="7" style="text-align:right") 营业总数:${{aggregatedData.projectPrices}} 提成总数:${{commissionAccountTotal}} 小费补贴:${{aggregatedData.subsidyTotal}} 等待费用:${{aggregatedData.waitingPriceTotal}} 利润总数:${{profits}}
+        //- tr
+        //-   th(colspan="7" style="text-align:right") 实收总数:${{aggregatedData.paytotals}} 其中现金:${{aggregatedData.cashAmount}} 礼卡:${{aggregatedData.giftCardAmount}} 信用卡:${{aggregatedData.creditCardAmount}} 优惠券:${{aggregatedData.couponAmount}} 现金盈亏:${{cashProfits}}
     table( v-if="reportType=='techReport'" v-for="i in techList" cellspacing="0" cellpadding="0" style="width:100%;page-break-after: always;")
       caption 技师报单
       tfoot
