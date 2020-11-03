@@ -256,7 +256,8 @@ export default {
       const hour = parseInt(position.split('-')[0].split(':')[0])
       const minute = parseInt(position.split('-')[0].split(':')[1])
       const timeFirst = new Date(
-        this.dateStart.getTime() + (hour * 60 + minute) * 60 * 1000
+        // this.dateStart.getTime() + (hour * 60 + minute) * 60 * 1000
+        this.dateStart.setHours(hour, minute)
       )
       const timePositions = [
         {
@@ -441,7 +442,8 @@ export default {
       const hour = parseInt(this.title.split('-')[0].split(':')[0])
       const minute = parseInt(this.title.split('-')[0].split(':')[1])
       const timeFirst = new Date(
-        this.dateStart.getTime() + (hour * 60 + minute) * 60 * 1000
+        // this.dateStart.getTime() + (hour * 60 + minute) * 60 * 1000
+        this.dateStart.setHours(hour, minute)
       )
       const timePositions = [
         {
@@ -456,6 +458,7 @@ export default {
 
       for (let i = 1; i < count; i++) {
         const prevTimePosition = timePositions[timePositions.length - 1]
+        debugger
         let time = new Date(
           prevTimePosition.time.getTime() + this.projectDuration * 60 * 1000
         )
