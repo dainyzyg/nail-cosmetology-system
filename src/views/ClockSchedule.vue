@@ -458,7 +458,7 @@ export default {
 
       for (let i = 1; i < count; i++) {
         const prevTimePosition = timePositions[timePositions.length - 1]
-        debugger
+        // debugger
         let time = new Date(
           prevTimePosition.time.getTime() + this.projectDuration * 60 * 1000
         )

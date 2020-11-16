@@ -221,6 +221,10 @@
 //
 //
 //
+//
+//
+//
+//
 
 
 
@@ -755,7 +759,10 @@ var render = function() {
                       )
                     ]),
                     _c("td", { staticClass: "align-right" }, [
-                      _vm._v(_vm._s(i.tips) + "+" + _vm._s(i.subsidys))
+                      _vm._v(_vm._s(i.tips))
+                    ]),
+                    _c("td", { staticClass: "align-right" }, [
+                      _vm._v(_vm._s(i.subsidys))
                     ]),
                     _c("td", { staticClass: "align-right" }, [
                       _vm._v(_vm._s(i.waitingPriceTotal || 0))
@@ -770,7 +777,9 @@ var render = function() {
                       _vm._v(
                         _vm._s(
                           _vm.fixed2(
-                            i.projectPrices - _vm.correctNum(i.commissionTotal)
+                            i.projectPrices -
+                              _vm.correctNum(i.commissionTotal) -
+                              _vm.correctNum(i.subsidys)
                           )
                         )
                       )
@@ -808,6 +817,7 @@ var render = function() {
                     _vm._v("$" + _vm._s(_vm.profits))
                   ]),
                   _c("th"),
+                  _c("th"),
                   _c("th")
                 ]),
                 _c("tr", [
@@ -841,6 +851,7 @@ var render = function() {
                     _c("br"),
                     _vm._v("$" + _vm._s(_vm.cashProfits))
                   ]),
+                  _c("th"),
                   _c("th")
                 ])
               ])
@@ -1057,8 +1068,9 @@ var staticRenderFns = [
     return _c("thead", { staticStyle: { display: "table-header-group" } }, [
       _c("tr", [
         _c("th", [_vm._v("技师姓名")]),
-        _c("th", [_vm._v("技师星级1")]),
+        _c("th", [_vm._v("技师星级")]),
         _c("th", [_vm._v("小费总数$")]),
+        _c("th", [_vm._v("小费补贴$")]),
         _c("th", [_vm._v("等待费用$")]),
         _c("th", [_vm._v("单价总数$")]),
         _c("th", [_vm._v("技师提成$")]),

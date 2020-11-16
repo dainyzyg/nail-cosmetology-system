@@ -11,8 +11,9 @@
       thead(style="display:table-header-group;")
         tr
           th 技师姓名
-          th 技师星级1
+          th 技师星级
           th 小费总数$
+          th 小费补贴$
           th 等待费用$
           th 单价总数$
           th 技师提成$
@@ -22,11 +23,12 @@
           td.align-center {{i.name}}
           td.align-right {{isNaN(i.rates/i.count)?'':(i.rates/i.count).toFixed(2)}}
           //- td.align-right {{(i.tips||0)+(i.subsidys||0)}}
-          td.align-right {{i.tips}}+{{i.subsidys}}
+          td.align-right {{i.tips}}
+          td.align-right {{i.subsidys}}
           td.align-right {{i.waitingPriceTotal||0}}
           td.align-right {{i.projectPrices}}
           td.align-right {{fixed2(i.commissionTotal)}}
-          td.align-right {{fixed2(i.projectPrices-correctNum(i.commissionTotal))}}
+          td.align-right {{fixed2(i.projectPrices-correctNum(i.commissionTotal)-correctNum(i.subsidys))}}
       tfoot
         tr
           th
@@ -49,6 +51,7 @@
             | 利润总数
             br
             | ${{profits}}
+          th
           th
           th
         tr
@@ -76,6 +79,7 @@
             | 现金盈亏
             br
             | ${{cashProfits}}
+          th
           th
         //- tr
         //-   th(colspan="7" style="text-align:right") 营业总数:${{aggregatedData.projectPrices}} 提成总数:${{commissionAccountTotal}} 小费补贴:${{aggregatedData.subsidyTotal}} 等待费用:${{aggregatedData.waitingPriceTotal}} 利润总数:${{profits}}
