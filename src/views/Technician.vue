@@ -31,6 +31,11 @@
           el-input(auto-complete='off' v-model="formData.targetLevel" style="width:202px")
         el-form-item(label='实际得分')
           el-input-number(v-model="formData.score" style="width:184px")
+        el-form-item(label='上钟时长')
+          el-select(v-model="formData.workTimeDuration")
+            el-option(:label="30" :value="30")
+            el-option(:label="45" :value="45")
+            el-option(:label="60" :value="60")
       .dialog-footer(slot='footer')
         el-button(@click="addVisible=false") 取 消
         el-button(type='primary' @click="save") 确 定

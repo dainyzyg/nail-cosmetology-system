@@ -8,7 +8,7 @@
         span {{scope.row.originalCount||scope.row.orderCount}}
     el-table-column(align="center" label="添加数量")
       template(slot-scope='scope')
-        el-input-number(size="medium" v-model="scope.row.addCount" :precision="0" :min="0" @change="change(scope.row,$event)")
+        el-input-number(size="medium" v-model="scope.row.addCount" :precision="0" :min="-10" @change="change(scope.row,$event)")
 </template>
 
 <script>

@@ -111,25 +111,32 @@ window.algorithm = {
   },
   workBeginTime() {
     const day = this.getDateNow().getDay()
-    let time
+    let timeStr
     if (day > 0 && day < 6) {
-      time = parseInt(localStorage.workBeginTime)
+      timeStr = localStorage.workBeginTime
     } else {
-      time = parseInt(localStorage.weekendBeginTime)
+      timeStr = localStorage.weekendBeginTime
     }
     // return new Date(this.getDateStart().getTime() + time * 60 * 60 * 1000)
-    return new Date(this.getDateStart().setHours(time))
+    const timeStrArray = timeStr.split(':')
+    const hour = Number(timeStrArray[0])
+    const minute = Number(timeStrArray[1])
+    return new Date(this.getDateStart().setHours(hour, minute))
   },
   workEndTime() {
     const day = this.getDateNow().getDay()
-    let time
+    let timeStr
     if (day > 0 && day < 6) {
-      time = parseInt(localStorage.workEndTime)
+      timeStr = localStorage.workEndTime
     } else {
-      time = parseInt(localStorage.weekendEndTime)
+      timeStr = localStorage.weekendEndTime
     }
     // return new Date(this.getDateStart().getTime() + time * 60 * 60 * 1000)
-    return new Date(this.getDateStart().setHours(time))
+    // return new Date(this.getDateStart().setHours(time))
+    const timeStrArray = timeStr.split(':')
+    const hour = Number(timeStrArray[0])
+    const minute = Number(timeStrArray[1])
+    return new Date(this.getDateStart().setHours(hour, minute))
   },
   async getAttendanceInfo() {
     const attendanceInfo = {}

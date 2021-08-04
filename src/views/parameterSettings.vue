@@ -26,13 +26,27 @@
       el-form-item(label='种类优先级调整时间')
         el-input-number(v-model="priorityTime")
       el-form-item(label='工作日上下班时间')
-        el-input-number(v-model="workBeginTime")
+        //- el-input-number(v-model="workBeginTime")
+        el-time-select(v-model="workBeginTime" :picker-options="{start: '08:00',step: '00:15',end: '21:00'}" placeholder="上班时间")
         span.line -
-        el-input-number(v-model="workEndTime")
-      el-form-item(label='周末上下班时间')
-        el-input-number(v-model="weekendBeginTime")
-        span.line -
-        el-input-number(v-model="weekendEndTime")
+        //- el-input-number(v-model="workEndTime")
+        el-time-select(v-model="workEndTime" :picker-options="{start: '08:00',step: '00:15',end: '21:00'}" placeholder="下班时间")
+      el-form-item(label='午餐时间')
+        //- el-input-number(v-model="workBeginTime")
+        el-time-select(v-model="lunchBeginTime" :picker-options="{start: '08:00',step: '00:15',end: '21:00'}" placeholder="午餐开始时间")
+        span.line 午餐时长
+        //- el-input-number(v-model="workEndTime")
+        el-select(v-model="lunchDuration" placeholder="午餐时长")
+              el-option(:label="15" :value="15")
+              el-option(:label="30" :value="30")
+              el-option(:label="45" :value="45")
+              el-option(:label="60" :value="60")
+      //- el-form-item(label='周末上下班时间')
+      //-   //- el-input-number(v-model="weekendBeginTime")
+      //-   el-time-select(v-model="weekendBeginTime" :picker-options="{start: '08:00',step: '00:15',end: '21:00'}" placeholder="上班时间")
+      //-   span.line -
+      //-   //- el-input-number(v-model="weekendEndTime")
+      //-   el-time-select(v-model="weekendEndTime" :picker-options="{start: '08:00',step: '00:15',end: '21:00'}" placeholder="下班时间")
 </template>
 <script>
 const timeArray = [
@@ -46,6 +60,8 @@ const timeArray = [
   'priorityTime',
   'workBeginTime',
   'workEndTime',
+  'lunchBeginTime',
+  'lunchDuration',
   'weekendBeginTime',
   'weekendEndTime'
 ]
@@ -119,5 +135,6 @@ export default {
 }
 .line {
   margin: 0 10px;
+  color: #606266;
 }
 </style>

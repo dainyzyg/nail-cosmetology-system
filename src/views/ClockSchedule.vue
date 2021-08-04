@@ -500,7 +500,47 @@ export default {
         this.selectedOrder.id = this.$getNewID
       }
       const projects = this.getProjects(this.selectedOrder)
+      // TODO: 亚克力等大项目空格不后推，就是往后移的格子放回原来的行，同时后移的格子去掉 customTimeCountObj
+      debugger
+      let prevTime = null
       timePositions.forEach(i => {
+        if (!prevTime) {
+          return
+        }
+        let shouldTime = new Date(
+          prevTime.getTime() + this.projectDuration * 60 * 1000
+        )
+        // 格子没有后移
+        if (shouldTime.getTime() == i.time.getTime()) {
+          return
+        }
+        let index = 1
+        let position =
+          shouldTime.toLocaleTimeString('en-GB').replace(/:00$/, '') +
+          '-' +
+          index
+        while (this.positionObj[position]) {
+          index += 1
+          position =
+            shouldTime.toLocaleTimeString('en-GB').replace(/:00$/, '') +
+            '-' +
+            index
+        }
+        // 删除格子
+        let timeItem = this.timeList.find(x => x.time == i.timeStr)
+        if (timeItem) {
+          timeItem.orderCount -= 1
+          let count = this.data.customTimeCountObj[timeItem.time] || 0
+          this.data.customTimeCountObj[timeItem.time] = count - 1
+        }
+        // 把整格子上移
+        i.time = shouldTime
+        i.timeStr = shouldTime.toLocaleTimeString('en-GB').replace(/:00$/, '')
+        i.position = position
+        i.index = index
+
+        prevTime = i.time
+
         this.positionObj[i.position] = {
           name: this.selectedOrder.name,
           orderID: this.selectedOrder.id,
@@ -512,6 +552,19 @@ export default {
           this.positionObj.maxIndex = i.index
         }
       })
+
+      // timePositions.forEach(i => {
+      //   this.positionObj[i.position] = {
+      //     name: this.selectedOrder.name,
+      //     orderID: this.selectedOrder.id,
+      //     isArrive: this.selectedOrder.isArrive,
+      //     projects,
+      //     ...i
+      //   }
+      //   if (i.index > this.positionObj.maxIndex) {
+      //     this.positionObj.maxIndex = i.index
+      //   }
+      // })
       this.selectedOrder.timePositions = timePositions
       this.$set(this.orderObj, this.selectedOrder.id, this.selectedOrder)
       // 响应式 this.orderObj[this.selectedOrder.id] = this.selectedOrder
