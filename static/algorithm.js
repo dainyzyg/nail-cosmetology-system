@@ -1903,6 +1903,7 @@ window.algorithm = {
     return exceptionList
   },
   async initData() {
+    console.log('init Data')
     // refresh Date
     let nextDateMS =
       new Date(new Date().toDateString()).setHours(24) - new Date().getTime()
@@ -1972,7 +1973,7 @@ window.algorithm = {
     return parseInt(timeStr)
   },
   init(Vue) {
-    this.initData()
+    // this.initData()
     // setInterval(() => {
     //   window.algorithm.timeDuration += 1000 * 60
     //   this.assignpProjects()
